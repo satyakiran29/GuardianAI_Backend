@@ -45,18 +45,21 @@ def login_view(request):
             identifier = request.POST.get('identifier', '').strip()
             password = request.POST.get('password', '').strip()
 
-            user = UserProfile.objects.filter(
-                Q(email__iexact=identifier) | Q(phone=identifier)
-            ).first()
+            try:
+                user = UserProfile.objects.filter(
+                    Q(email__iexact=identifier) | Q(phone=identifier)
+                ).first()
 
-            if user and (user.password == password or password in ['admin123', 'guardian123', 'sheguard2026']):
-                request.session['dashboard_user_id'] = user.id
-                request.session['dashboard_user_name'] = user.name
-                request.session['dashboard_user_role'] = user.role
-                messages.success(request, f"Welcome back, Commander {user.name} ({user.get_role_display()})!")
-                return redirect(next_url)
-            else:
-                messages.error(request, "Invalid credentials. Please verify your email/phone and password.")
+                if user and (user.password == password or password in ['admin123', 'guardian123', 'sheguard2026']):
+                    request.session['dashboard_user_id'] = user.id
+                    request.session['dashboard_user_name'] = user.name
+                    request.session['dashboard_user_role'] = user.role
+                    messages.success(request, f"Welcome back, Commander {user.name} ({user.get_role_display()})!")
+                    return redirect(next_url)
+                else:
+                    messages.error(request, "Invalid credentials. Please verify your email/phone and password.")
+            except Exception as e:
+                messages.error(request, f"Database Notice: {str(e)[:120]}. Falling back or check database configuration.")
 
         elif auth_type == 'otp':
             phone = request.POST.get('phone', '').strip()

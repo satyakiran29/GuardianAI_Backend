@@ -70,7 +70,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'guardian_backend.wsgi.application'
 
-# Database Configuration (Supabase PostgreSQL / SQLite fallback)
+# Database Configuration (Supabase PostgreSQL with fallback to SQLite)
 DATABASE_URL = os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL')
 
 if DATABASE_URL:

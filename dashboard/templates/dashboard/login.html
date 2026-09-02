@@ -171,12 +171,12 @@
 
       <div class="form-group">
         <label class="form-label">Email or Phone Number</label>
-        <input type="text" name="identifier" id="pass_identifier" required placeholder="e.g. superadmin@guardianai.app" class="form-control" value="superadmin@guardianai.app">
+        <input type="text" name="identifier" id="pass_identifier" required placeholder="Enter your email or phone" class="form-control">
       </div>
 
       <div class="form-group">
         <label class="form-label">Password</label>
-        <input type="password" name="password" id="pass_password" required placeholder="Enter password" class="form-control" value="admin123">
+        <input type="password" name="password" id="pass_password" required placeholder="Enter password" class="form-control">
       </div>
 
       <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 12px; font-size: 0.95rem;">
@@ -192,7 +192,7 @@
 
       <div class="form-group">
         <label class="form-label">Registered Phone Number</label>
-        <input type="tel" name="phone" id="otp_phone" required placeholder="e.g. +919999000001" class="form-control" value="+919999000001">
+        <input type="tel" name="phone" id="otp_phone" required placeholder="e.g. +919876543210" class="form-control">
       </div>
 
       <div class="form-group">
@@ -202,7 +202,7 @@
             ⚡ Request Passcode
           </button>
         </div>
-        <input type="text" name="otp_code" id="otp_code" required maxlength="6" placeholder="Enter 6-digit OTP (e.g. 123456)" class="form-control" value="123456" style="letter-spacing: 4px; font-weight: bold; font-size: 1.1rem; text-align: center;">
+        <input type="text" name="otp_code" id="otp_code" required maxlength="6" placeholder="Enter 6-digit OTP" class="form-control" style="letter-spacing: 4px; font-weight: bold; font-size: 1.1rem; text-align: center;">
       </div>
 
       <div id="otp-alert-box" style="display: none; font-size: 0.8rem; padding: 8px 12px; border-radius: 8px; margin-bottom: 14px;"></div>
@@ -211,23 +211,6 @@
         🔑 Verify &amp; Sign In
       </button>
     </form>
-
-    <!-- Quick Demo Access Section -->
-    <div class="demo-accounts">
-      <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; font-weight: 700;">
-        ⚡ 1-Click Fast Commander Access
-      </div>
-
-      <button type="button" class="demo-btn" onclick="fillAndSubmit('superadmin@guardianai.app', 'admin123')">
-        <span>👑 <strong>SuperAdmin Lead</strong> (Satya Kiran)</span>
-        <span style="color: #c084fc; font-weight: 600;">Sign In &rarr;</span>
-      </button>
-
-      <button type="button" class="demo-btn" onclick="fillAndSubmit('mom@guardianai.app', 'guardian123')">
-        <span>🛡️ <strong>Guardian Unit</strong> (SHE Team Patrol)</span>
-        <span style="color: #34d399; font-weight: 600;">Sign In &rarr;</span>
-      </button>
-    </div>
   </div>
 
   <script>
@@ -243,13 +226,6 @@
         document.getElementById('tab-pass-btn').classList.remove('active');
         document.getElementById('tab-otp-btn').classList.add('active');
       }
-    }
-
-    function fillAndSubmit(identifier, password) {
-      switchTab('pass');
-      document.getElementById('pass_identifier').value = identifier;
-      document.getElementById('pass_password').value = password;
-      document.getElementById('form-pass').submit();
     }
 
     async function sendDashboardOtp() {
