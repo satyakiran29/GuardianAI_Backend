@@ -15,6 +15,7 @@ from .serializers import (
     TripLogSerializer
 )
 from .supabase_client import sync_user_to_supabase, sync_alert_to_supabase, sync_otp_to_supabase
+from .resend_mailer import send_otp_email, send_sos_alert_email
 
 class SendOtpView(APIView):
     def post(self, request):
@@ -41,11 +42,21 @@ class SendOtpView(APIView):
         # Sync to Supabase
         sync_otp_to_supabase(otp_record)
 
+        # Dispatch via Resend Email if email is provided or linked
+        email_dispatched = False
+        if '@' in target:
+            email_dispatched = send_otp_email(target, otp_code, purpose)
+        else:
+            user = UserProfile.objects.filter(phone=target).first()
+            if user and user.email and '@' in user.email:
+                email_dispatched = send_otp_email(user.email, otp_code, purpose)
+
         return Response({
             'status': 'success',
             'message': f'6-digit OTP dispatched to {target}',
             'target': target,
             'otp': otp_code,  # Sent in payload for test/demo convenience
+            'email_sent': email_dispatched,
             'expires_in_seconds': 600,
             'purpose': purpose
         }, status=status.HTTP_200_OK)
@@ -275,6 +286,10 @@ class SosTriggerView(APIView):
         # Sync to Supabase
         sync_alert_to_supabase(alert)
         sync_user_to_supabase(user)
+
+        # Dispatch Resend Email alert if user has a personal email
+        if user and user.email and '@' in user.email and not user.email.endswith('@guardianai.app'):
+            send_sos_alert_email(user.email, user.name, user.phone, address, latitude, longitude, trigger_source)
 
         serializer = EmergencyAlertSerializer(alert)
         return Response({
