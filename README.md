@@ -250,8 +250,8 @@ ALLOWED_HOSTS=*
 DATABASE_URL=postgresql://postgres.jwntzspmzapxablkmqhp:[YOUR-PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:6543/postgres
 
 # Supabase REST/Realtime Integration
-SUPABASE_URL=https://jwntzspmzapxablkmqhp.supabase.co
-SUPABASE_KEY=your-supabase-service-or-anon-key
+<!-- SUPABASE_URL=https://jwntzspmzapxablkmqhp.supabase.co
+SUPABASE_KEY=your-supabase-service-or-anon-key -->
 
 # Optional: Set to 'true' if you want to seed initial demo accounts on build
 SEED_DEMO_DATA=false

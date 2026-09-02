@@ -74,16 +74,26 @@ WSGI_APPLICATION = 'guardian_backend.wsgi.application'
 DATABASE_URL = os.getenv('DATABASE_URL') or os.getenv('SUPABASE_DB_URL')
 
 if DATABASE_URL:
+    # Auto-rewrite direct IPv6 Supabase host to verified IPv4 pooler for Render/Cloud hosts
+    if 'db.jwntzspmzapxablkmqhp.supabase.co' in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace(
+            'db.jwntzspmzapxablkmqhp.supabase.co:5432',
+            'aws-0-ap-northeast-1.pooler.supabase.com:6543'
+        ).replace(
+            '//postgres:',
+            '//postgres.jwntzspmzapxablkmqhp:'
+        )
+
     try:
         import dj_database_url
         DATABASES = {
-            'default': dj_database_url.config(
-                default=DATABASE_URL,
+            'default': dj_database_url.parse(
+                DATABASE_URL,
                 conn_max_age=600,
-                conn_health_checks=True,
                 ssl_require=True
             )
         }
+        DATABASES['default']['CONN_HEALTH_CHECKS'] = True
     except Exception:
         DATABASES = {
             'default': {
