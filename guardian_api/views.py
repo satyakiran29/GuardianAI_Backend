@@ -135,6 +135,62 @@ class RegisterView(APIView):
         }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
+class UpdateProfileView(APIView):
+    def post(self, request):
+        current_email = request.data.get('current_email', '').strip().lower()
+        current_phone = request.data.get('current_phone', '').strip()
+        name = request.data.get('name', '').strip()
+        email = request.data.get('email', '').strip().lower()
+        phone = request.data.get('phone', '').strip()
+        password = request.data.get('password', '').strip()
+        role = request.data.get('role', '').strip().lower()
+
+        user = None
+        if current_phone:
+            user = UserProfile.objects.filter(phone=current_phone).first()
+        if not user and current_email:
+            user = UserProfile.objects.filter(email__iexact=current_email).first()
+        if not user and phone:
+            user = UserProfile.objects.filter(phone=phone).first()
+        if not user and email:
+            user = UserProfile.objects.filter(email__iexact=email).first()
+
+        if not user:
+            if not name or not phone:
+                return Response({'status': 'error', 'message': 'Name and phone are required'}, status=status.HTTP_400_BAD_REQUEST)
+            user = UserProfile.objects.create(
+                name=name,
+                phone=phone,
+                email=email or f"{phone}@guardianai.app",
+                password=password or 'guardian123',
+                role=role if role in ['superadmin', 'guardian', 'user'] else 'user',
+                is_verified=True,
+                is_active=True
+            )
+        else:
+            if name:
+                user.name = name
+            if email:
+                user.email = email
+            if phone:
+                user.phone = phone
+            if password:
+                user.password = password
+            if role and role in ['superadmin', 'guardian', 'user']:
+                user.role = role
+            user.save()
+
+        sync_user_to_supabase(user)
+
+        serializer = UserProfileSerializer(user)
+        return Response({
+            'status': 'success',
+            'message': 'Profile updated successfully!',
+            'user': serializer.data,
+            'token': f"token_user_{user.id}_{user.phone}"
+        }, status=status.HTTP_200_OK)
+
+
 class LoginView(APIView):
     def post(self, request):
         identifier = request.data.get('identifier', '').strip() or request.data.get('email', '').strip() or request.data.get('phone', '').strip()

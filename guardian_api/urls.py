@@ -3,6 +3,7 @@ from .views import (
     SendOtpView,
     VerifyOtpView,
     RegisterView,
+    UpdateProfileView,
     LoginView,
     SosTriggerView,
     SosResolveView,
@@ -18,6 +19,7 @@ urlpatterns = [
     path('auth/send-otp/', SendOtpView.as_view(), name='api-send-otp'),
     path('auth/verify-otp/', VerifyOtpView.as_view(), name='api-verify-otp'),
     path('auth/register/', RegisterView.as_view(), name='api-register'),
+    path('auth/profile/update/', UpdateProfileView.as_view(), name='api-profile-update'),
     path('auth/login/', LoginView.as_view(), name='api-login'),
 
     # SOS & Emergency Telemetry
