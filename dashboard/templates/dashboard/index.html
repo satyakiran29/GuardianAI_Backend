@@ -1,0 +1,241 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}GuardianAI — Live Radar &amp; Emergency Command{% endblock %}
+
+{% block content %}
+<!-- Top Header & Role Switcher -->
+<div class="top-header">
+  <div class="header-title">
+    <h2>Safety Command &amp; Live Radar</h2>
+    <p>Real-time telemetry, SOS emergency dispatch, and AI protection network</p>
+  </div>
+
+  <!-- Role View Switcher -->
+  <div class="role-switcher">
+    <a href="?role_view=superadmin" class="role-tab {% if current_role_view == 'superadmin' %}active-superadmin{% endif %}">
+      <span>👑</span> SuperAdmin
+    </a>
+    <a href="?role_view=guardian" class="role-tab {% if current_role_view == 'guardian' %}active-guardian{% endif %}">
+      <span>🛡️</span> Guardian
+    </a>
+    <a href="?role_view=user" class="role-tab {% if current_role_view == 'user' %}active-user{% endif %}">
+      <span>🌸</span> User Portal
+    </a>
+  </div>
+</div>
+
+<!-- Metrics Cards Grid -->
+<div class="metrics-grid">
+  <div class="metric-card {% if active_alerts_count > 0 %}card-sos{% endif %}">
+    <div class="metric-header">
+      <span class="metric-title">Active SOS Emergencies</span>
+      <div class="metric-icon icon-red">🚨</div>
+    </div>
+    <div class="metric-value">{{ active_alerts_count }}</div>
+    <div class="metric-subtitle">
+      {% if active_alerts_count > 0 %}
+        <span style="color: #ef4444; font-weight: 700;">● Critical response required</span>
+      {% else %}
+        <span style="color: #10b981;">✓ All sectors peaceful &amp; secured</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-title">Protected Women / Users</span>
+      <div class="metric-icon icon-purple">👥</div>
+    </div>
+    <div class="metric-value" id="stat-total-users">{{ total_users }}</div>
+    <div class="metric-subtitle">
+      <span>{{ users_count }} Active Citizens • {{ superadmins_count }} SuperAdmins</span>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-title">Guardian Responders</span>
+      <div class="metric-icon icon-emerald">🛡️</div>
+    </div>
+    <div class="metric-value">{{ guardians_count }}</div>
+    <div class="metric-subtitle">
+      <span>SHE Teams, Campus Guards &amp; Verified Escorts</span>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-title">OTP Authorizations</span>
+      <div class="metric-icon icon-cyan">🔑</div>
+    </div>
+    <div class="metric-value">{{ otps_today }}</div>
+    <div class="metric-subtitle">
+      <span>Dispatched &amp; verified today</span>
+    </div>
+  </div>
+</div>
+
+<!-- Split Section: Live Map & Live SOS Stream -->
+<div class="dashboard-grid">
+  <!-- Interactive Live Map Panel -->
+  <div class="glass-panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>📍</span> Live Telemetric Radar <small style="font-size: 0.75rem; color: #60a5fa; margin-left: 8px; font-weight: normal;">(Powered by OpenFreeMap • Free &amp; Open Source)</small>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <span class="role-badge role-guardian">🛡️ {{ guardians_count }} Guardians Online</span>
+        <button class="btn btn-outline btn-sm" onclick="initLiveMap()">🔄 Recenter</button>
+      </div>
+    </div>
+    <div id="live-map"></div>
+    <div style="display: flex; justify-content: space-between; margin-top: 12px; font-size: 0.8rem; color: var(--text-secondary); flex-wrap: wrap; gap: 6px;">
+      <div>🔴 Pulsing = Active Victim SOS</div>
+      <div>🛡️ Green = Guardian Escort Unit</div>
+      <div>🗺️ Map = <strong>OpenFreeMap</strong> (Zero Cost / No API Keys)</div>
+    </div>
+  </div>
+
+  <!-- Real-Time Emergency SOS Stream -->
+  <div class="glass-panel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span>🚨</span> Live Emergency Stream
+      </div>
+      <a href="{% url 'dashboard-alerts' %}" class="btn btn-outline btn-sm">View All ({{ recent_alerts.count }})</a>
+    </div>
+
+    <div class="incident-list">
+      {% for alert in active_alerts %}
+        <div class="incident-card status-active">
+          <div class="incident-header">
+            <div>
+              <div class="victim-name">🚨 {{ alert.user.name }}</div>
+              <div class="victim-meta">📞 {{ alert.user.phone }} • Battery: {{ alert.battery_level }}%</div>
+            </div>
+            <span class="incident-status-tag tag-active">SOS ACTIVE</span>
+          </div>
+          <div class="incident-location">
+            <span>📍</span> {{ alert.address }}
+          </div>
+          <div style="font-size: 0.78rem; color: #f87171; margin-bottom: 10px;">
+            Trigger: <strong>{{ alert.get_trigger_source_display }}</strong> • Siren: {% if alert.siren_active %}🔊 Loud Siren Active{% else %}Silent{% endif %}
+          </div>
+          <div class="incident-actions">
+            <form method="POST" action="{% url 'dashboard-dispatch-alert' alert.id %}" style="display: inline;">
+              {% csrf_token %}
+              <input type="hidden" name="responder_id" value="{% if guardians.first %}{{ guardians.first.id }}{% endif %}">
+              <button type="submit" class="btn btn-primary btn-sm">⚡ Dispatch Nearest Guardian</button>
+            </form>
+            <form method="POST" action="{% url 'dashboard-resolve-alert' alert.id %}" style="display: inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-emerald btn-sm">✓ Mark Safe &amp; Resolved</button>
+            </form>
+          </div>
+        </div>
+      {% empty %}
+        {% for alert in dispatched_alerts %}
+          <div class="incident-card status-dispatched">
+            <div class="incident-header">
+              <div>
+                <div class="victim-name">{{ alert.user.name }}</div>
+                <div class="victim-meta">📞 {{ alert.user.phone }} • Battery: {{ alert.battery_level }}%</div>
+              </div>
+              <span class="incident-status-tag tag-dispatched">DISPATCHED</span>
+            </div>
+            <div class="incident-location">
+              <span>📍</span> {{ alert.address }}
+            </div>
+            <div style="font-size: 0.78rem; color: #fbbf24; margin-bottom: 10px;">
+              Assigned Responder: <strong>{{ alert.responder.name|default:"Patrol Unit" }}</strong>
+            </div>
+            <div class="incident-actions">
+              <form method="POST" action="{% url 'dashboard-resolve-alert' alert.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-emerald btn-sm">✓ Confirm Safe Resolution</button>
+              </form>
+            </div>
+          </div>
+        {% empty %}
+          <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+            <div style="font-size: 3rem; margin-bottom: 12px;">🛡️</div>
+            <h4 style="color: #fff; margin-bottom: 6px;">Zero Active Emergencies</h4>
+            <p style="font-size: 0.85rem;">All monitored users and safe routes are currently secure.</p>
+          </div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Quick User Directory Overview -->
+<div class="glass-panel">
+  <div class="panel-header">
+    <div class="panel-title">
+      <span>👥</span> Monitored Users &amp; Multi-Role Directory
+    </div>
+    <a href="{% url 'dashboard-users' %}" class="btn btn-primary btn-sm">+ Manage All Users</a>
+  </div>
+
+  <div class="table-container">
+    <table class="cyber-table">
+      <thead>
+        <tr>
+          <th>User / Name</th>
+          <th>Contact / Phone</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Last Known Location</th>
+          <th>Battery</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in recent_users %}
+          <tr>
+            <td>
+              <div style="font-weight: 700; color: #fff;">{{ user.name }}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">{{ user.email }}</div>
+            </td>
+            <td><code>{{ user.phone }}</code></td>
+            <td>
+              {% if user.role == 'superadmin' %}
+                <span class="role-badge role-superadmin">👑 SuperAdmin</span>
+              {% elif user.role == 'guardian' %}
+                <span class="role-badge role-guardian">🛡️ Guardian</span>
+              {% else %}
+                <span class="role-badge role-user">🌸 Protected User</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if user.is_verified %}
+                <span style="color: #10b981; font-weight: 600;">✓ Verified</span>
+              {% else %}
+                <span style="color: #f59e0b; font-weight: 600;">⏳ Pending</span>
+              {% endif %}
+            </td>
+            <td>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">📍 {{ user.last_address|default:"Location Pending" }}</span>
+            </td>
+            <td>
+              <span style="font-weight: 700; {% if user.battery_level <= 15 %}color: #ef4444;{% else %}color: #10b981;{% endif %}">
+                {{ user.battery_level }}%
+              </span>
+            </td>
+            <td>
+              <a href="{% url 'dashboard-users' %}?q={{ user.phone }}" class="btn btn-outline btn-sm">Inspect</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Pass dynamic map markers from Django view
+  const MAP_MARKERS = {{ map_markers_json|safe }};
+</script>
+{% endblock %}

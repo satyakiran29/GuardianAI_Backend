@@ -1,0 +1,122 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}GuardianAI — SOS Emergency Incidents Log{% endblock %}
+
+{% block content %}
+<div class="top-header">
+  <div class="header-title">
+    <h2>SOS Emergency Incidents Log</h2>
+    <p>Comprehensive history of panic triggers, telemetry coordinates, and guardian dispatches</p>
+  </div>
+</div>
+
+<!-- Status Filters -->
+<div class="glass-panel" style="margin-bottom: 24px; padding: 16px 24px;">
+  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+    <a href="{% url 'dashboard-alerts' %}" class="btn {% if not status_filter %}btn-primary{% else %}btn-outline{% endif %} btn-sm">
+      All Incidents ({{ alerts.count }})
+    </a>
+    <a href="{% url 'dashboard-alerts' %}?status=active" class="btn {% if status_filter == 'active' %}btn-sos{% else %}btn-outline{% endif %} btn-sm">
+      🚨 Active Emergencies ({{ active_count }})
+    </a>
+    <a href="{% url 'dashboard-alerts' %}?status=dispatched" class="btn {% if status_filter == 'dispatched' %}btn-primary{% else %}btn-outline{% endif %} btn-sm">
+      ⚡ Dispatched Escorts ({{ dispatched_count }})
+    </a>
+    <a href="{% url 'dashboard-alerts' %}?status=resolved" class="btn {% if status_filter == 'resolved' %}btn-emerald{% else %}btn-outline{% endif %} btn-sm">
+      ✓ Resolved Safe ({{ resolved_count }})
+    </a>
+  </div>
+</div>
+
+<!-- Incidents Table -->
+<div class="glass-panel">
+  <div class="table-container">
+    <table class="cyber-table">
+      <thead>
+        <tr>
+          <th>Alert ID</th>
+          <th>Victim / User</th>
+          <th>Trigger Mechanism</th>
+          <th>Location / GPS</th>
+          <th>Status</th>
+          <th>Assigned Guardian</th>
+          <th>Timestamp</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for alert in alerts %}
+          <tr>
+            <td><strong>#{{ alert.id }}</strong></td>
+            <td>
+              <div style="font-weight: 700; color: #fff;">{{ alert.user.name }}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">📞 {{ alert.user.phone }}</div>
+            </td>
+            <td>
+              <span class="role-badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);">
+                {{ alert.get_trigger_source_display }}
+              </span>
+            </td>
+            <td>
+              <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                📍 {{ alert.address }}
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-muted);">
+                GPS: <code>{{ alert.latitude|floatformat:4 }}, {{ alert.longitude|floatformat:4 }}</code>
+              </div>
+            </td>
+            <td>
+              {% if alert.status == 'active' %}
+                <span class="incident-status-tag tag-active">🚨 ACTIVE</span>
+              {% elif alert.status == 'dispatched' %}
+                <span class="incident-status-tag tag-dispatched">⚡ DISPATCHED</span>
+              {% else %}
+                <span class="incident-status-tag tag-resolved">✓ RESOLVED</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if alert.responder %}
+                <div style="color: #34d399; font-weight: 600; font-size: 0.85rem;">🛡️ {{ alert.responder.name }}</div>
+              {% else %}
+                <span style="color: var(--text-muted); font-size: 0.8rem;">Unassigned</span>
+              {% endif %}
+            </td>
+            <td>
+              <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ alert.timestamp|date:"M d, Y" }}</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">{{ alert.timestamp|time:"H:i:s" }}</div>
+            </td>
+            <td>
+              {% if alert.status == 'active' %}
+                <div style="display: flex; gap: 6px;">
+                  <form method="POST" action="{% url 'dashboard-dispatch-alert' alert.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="responder_id" value="{% if guardians.first %}{{ guardians.first.id }}{% endif %}">
+                    <button type="submit" class="btn btn-primary btn-sm">Dispatch</button>
+                  </form>
+                  <form method="POST" action="{% url 'dashboard-resolve-alert' alert.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-emerald btn-sm">Resolve</button>
+                  </form>
+                </div>
+              {% elif alert.status == 'dispatched' %}
+                <form method="POST" action="{% url 'dashboard-resolve-alert' alert.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-emerald btn-sm">Mark Resolved</button>
+                </form>
+              {% else %}
+                <span style="font-size: 0.78rem; color: var(--text-muted);">Closed</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+              No incident alerts logged in this view.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}GuardianAI — OTP &amp; Auth Verification System{% endblock %}
+
+{% block content %}
+<div class="top-header">
+  <div class="header-title">
+    <h2>OTP &amp; Security Authentication System</h2>
+    <p>6-Digit dynamic OTP dispatch monitor, verification lifecycle, and cloud security tokens</p>
+  </div>
+</div>
+
+<!-- Metrics Cards -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-title">Total OTP Transactions</span>
+      <div class="metric-icon icon-cyan">🔑</div>
+    </div>
+    <div class="metric-value">{{ total_otps }}</div>
+    <div class="metric-subtitle">Dispatched across all channels</div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-title">Verified Passcodes</span>
+      <div class="metric-icon icon-emerald">✓</div>
+    </div>
+    <div class="metric-value">{{ verified_count }}</div>
+    <div class="metric-subtitle">Successful user authorizations</div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-title">Pending / Active OTPs</span>
+      <div class="metric-icon icon-purple">⏳</div>
+    </div>
+    <div class="metric-value">{{ pending_count }}</div>
+    <div class="metric-subtitle">Awaiting citizen verification</div>
+  </div>
+</div>
+
+<!-- Interactive Live OTP Simulator & Dispatcher -->
+<div class="glass-panel" style="margin-bottom: 24px; border: 1px solid var(--border-glow-purple);">
+  <div class="panel-header">
+    <div class="panel-title">
+      <span>⚡</span> Live OTP Dispatch &amp; Verification Simulator
+    </div>
+    <span class="role-badge role-superadmin">Developer Testing Console</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+    <div>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 14px;">
+        Generate and dispatch a real 6-digit OTP code to any phone or email. This will test the live API and Supabase database sync in real time.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Phone Number or Email Target:</label>
+        <input type="text" id="test-otp-target" class="form-control" placeholder="e.g. +919876543210 or user@example.com" value="+919876543210">
+      </div>
+
+      <button id="btn-send-test-otp" class="btn btn-primary" type="button">
+        ⚡ Dispatch 6-Digit OTP Now
+      </button>
+    </div>
+
+    <div>
+      <div id="test-otp-result">
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px dashed var(--border-color); padding: 20px; border-radius: 12px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+          Enter target and press dispatch to simulate OTP issuance and view cloud payload.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- OTP Logs Table -->
+<div class="glass-panel">
+  <div class="panel-header">
+    <div class="panel-title">
+      <span>📜</span> Recent OTP Dispatch Logs
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="location.reload()">🔄 Refresh Logs</button>
+  </div>
+
+  <div class="table-container">
+    <table class="cyber-table">
+      <thead>
+        <tr>
+          <th>Target (Phone / Email)</th>
+          <th>6-Digit Passcode</th>
+          <th>Purpose</th>
+          <th>Verification Status</th>
+          <th>Dispatched At</th>
+          <th>Expiry</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in otps %}
+          <tr>
+            <td><code>{{ record.target }}</code></td>
+            <td>
+              <strong style="letter-spacing: 2px; font-family: monospace; font-size: 1.05rem; color: #38bdf8;">
+                {{ record.otp_code }}
+              </strong>
+            </td>
+            <td>
+              <span class="role-badge" style="background: rgba(139, 92, 246, 0.15); color: #c084fc; font-size: 0.72rem;">
+                {{ record.purpose|upper }}
+              </span>
+            </td>
+            <td>
+              {% if record.is_verified %}
+                <span class="role-badge role-guardian" style="font-size: 0.72rem;">✓ VERIFIED</span>
+              {% else %}
+                {% if record.is_expired %}
+                  <span class="role-badge" style="background: rgba(239, 68, 68, 0.15); color: #f87171; font-size: 0.72rem;">EXPIRED</span>
+                {% else %}
+                  <span class="role-badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.72rem;">⏳ ACTIVE</span>
+                {% endif %}
+              {% endif %}
+            </td>
+            <td>
+              <span style="font-size: 0.8rem; color: var(--text-secondary);">{{ record.created_at|date:"M d, H:i:s" }}</span>
+            </td>
+            <td>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">{{ record.expires_at|date:"H:i:s" }}</span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">
+              No OTP records generated yet.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

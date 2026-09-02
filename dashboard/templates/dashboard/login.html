@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GuardianAI — Command Center Login</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  
+  <style>
+    .auth-page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 20%, rgba(139, 92, 246, 0.15), transparent 45%),
+                  radial-gradient(circle at 80% 80%, rgba(239, 68, 68, 0.1), transparent 50%),
+                  #090d16;
+      padding: 20px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 460px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: 20px;
+      padding: 36px 32px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7),
+                  0 0 40px rgba(139, 92, 246, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .auth-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #8b5cf6, #ec4899, #3b82f6);
+    }
+
+    .auth-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .auth-logo {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #8b5cf6, #ec4899);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      margin: 0 auto 16px;
+      box-shadow: 0 0 24px rgba(139, 92, 246, 0.4);
+    }
+
+    .auth-title {
+      font-family: var(--font-heading);
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #fff;
+      margin: 0 0 6px;
+    }
+
+    .auth-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .tab-nav {
+      display: flex;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 24px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.82rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--primary-glow);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .demo-accounts {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .demo-btn {
+      width: 100%;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: rgba(30, 41, 59, 0.5);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      border-radius: 10px;
+      color: #cbd5e1;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .demo-btn:hover {
+      background: rgba(139, 92, 246, 0.15);
+      border-color: #8b5cf6;
+      color: #fff;
+    }
+  </style>
+</head>
+<body class="auth-page">
+
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-logo">🛡️</div>
+      <h2 class="auth-title">GuardianAI Command Desk</h2>
+      <p class="auth-subtitle">Authorized personnel only • SuperAdmin &amp; Guardian Portal</p>
+    </div>
+
+    {% if messages %}
+      <div style="margin-bottom: 18px;">
+        {% for message in messages %}
+          <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; padding: 10px 14px; border-radius: 10px; color: #fca5a5; font-size: 0.85rem; font-weight: 600;">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Auth Mode Tabs -->
+    <div class="tab-nav">
+      <button type="button" class="tab-btn active" id="tab-pass-btn" onclick="switchTab('pass')">Password Sign-In</button>
+      <button type="button" class="tab-btn" id="tab-otp-btn" onclick="switchTab('otp')">Phone OTP Access</button>
+    </div>
+
+    <!-- Form 1: Password Login -->
+    <form method="POST" id="form-pass">
+      {% csrf_token %}
+      <input type="hidden" name="auth_type" value="password">
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <div class="form-group">
+        <label class="form-label">Email or Phone Number</label>
+        <input type="text" name="identifier" id="pass_identifier" required placeholder="e.g. superadmin@guardianai.app" class="form-control" value="superadmin@guardianai.app">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" id="pass_password" required placeholder="Enter password" class="form-control" value="admin123">
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 12px; font-size: 0.95rem;">
+        🔐 Access Command Dashboard
+      </button>
+    </form>
+
+    <!-- Form 2: Phone OTP Login -->
+    <form method="POST" id="form-otp" style="display: none;">
+      {% csrf_token %}
+      <input type="hidden" name="auth_type" value="otp">
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <div class="form-group">
+        <label class="form-label">Registered Phone Number</label>
+        <input type="tel" name="phone" id="otp_phone" required placeholder="e.g. +919999000001" class="form-control" value="+919999000001">
+      </div>
+
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label class="form-label" style="margin: 0;">6-Digit OTP Passcode</label>
+          <button type="button" onclick="sendDashboardOtp()" id="btn-request-otp" style="background: transparent; border: none; color: #60a5fa; font-size: 0.78rem; font-weight: 600; cursor: pointer;">
+            ⚡ Request Passcode
+          </button>
+        </div>
+        <input type="text" name="otp_code" id="otp_code" required maxlength="6" placeholder="Enter 6-digit OTP (e.g. 123456)" class="form-control" value="123456" style="letter-spacing: 4px; font-weight: bold; font-size: 1.1rem; text-align: center;">
+      </div>
+
+      <div id="otp-alert-box" style="display: none; font-size: 0.8rem; padding: 8px 12px; border-radius: 8px; margin-bottom: 14px;"></div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 6px; padding: 12px; font-size: 0.95rem;">
+        🔑 Verify &amp; Sign In
+      </button>
+    </form>
+
+    <!-- Quick Demo Access Section -->
+    <div class="demo-accounts">
+      <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px; font-weight: 700;">
+        ⚡ 1-Click Fast Commander Access
+      </div>
+
+      <button type="button" class="demo-btn" onclick="fillAndSubmit('superadmin@guardianai.app', 'admin123')">
+        <span>👑 <strong>SuperAdmin Lead</strong> (Satya Kiran)</span>
+        <span style="color: #c084fc; font-weight: 600;">Sign In &rarr;</span>
+      </button>
+
+      <button type="button" class="demo-btn" onclick="fillAndSubmit('mom@guardianai.app', 'guardian123')">
+        <span>🛡️ <strong>Guardian Unit</strong> (SHE Team Patrol)</span>
+        <span style="color: #34d399; font-weight: 600;">Sign In &rarr;</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(mode) {
+      if (mode === 'pass') {
+        document.getElementById('form-pass').style.display = 'block';
+        document.getElementById('form-otp').style.display = 'none';
+        document.getElementById('tab-pass-btn').classList.add('active');
+        document.getElementById('tab-otp-btn').classList.remove('active');
+      } else {
+        document.getElementById('form-pass').style.display = 'none';
+        document.getElementById('form-otp').style.display = 'block';
+        document.getElementById('tab-pass-btn').classList.remove('active');
+        document.getElementById('tab-otp-btn').classList.add('active');
+      }
+    }
+
+    function fillAndSubmit(identifier, password) {
+      switchTab('pass');
+      document.getElementById('pass_identifier').value = identifier;
+      document.getElementById('pass_password').value = password;
+      document.getElementById('form-pass').submit();
+    }
+
+    async function sendDashboardOtp() {
+      const phone = document.getElementById('otp_phone').value.trim();
+      const btn = document.getElementById('btn-request-otp');
+      const alertBox = document.getElementById('otp-alert-box');
+
+      if (!phone) {
+        alert('Please enter your phone number first.');
+        return;
+      }
+
+      btn.innerText = 'Dispatching...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch('/api/auth/send-otp/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: phone, purpose: 'dashboard_login' })
+        });
+        const data = await res.json();
+        btn.innerText = 'Resend Code';
+        btn.disabled = false;
+
+        alertBox.style.display = 'block';
+        alertBox.style.background = 'rgba(16, 185, 129, 0.15)';
+        alertBox.style.border = '1px solid #10b981';
+        alertBox.style.color = '#34d399';
+        alertBox.innerHTML = `✅ Passcode generated: <strong style="color:#fff; font-size:1rem;">${data.otp || '123456'}</strong> (Demo Pass: 123456)`;
+        document.getElementById('otp_code').value = data.otp || '123456';
+      } catch (e) {
+        btn.innerText = 'Request Passcode';
+        btn.disabled = false;
+        alertBox.style.display = 'block';
+        alertBox.style.background = 'rgba(239, 68, 68, 0.15)';
+        alertBox.style.border = '1px solid #ef4444';
+        alertBox.style.color = '#f87171';
+        alertBox.innerHTML = 'Using master passcode: <strong>123456</strong>';
+        document.getElementById('otp_code').value = '123456';
+      }
+    }
+  </script>
+</body>
+</html>
