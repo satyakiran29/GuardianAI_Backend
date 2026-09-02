@@ -24,32 +24,34 @@ function initLiveMap() {
     attributionControl: true
   }).setView([17.4065, 78.4772], 12);
 
-  // OpenFreeMap Free Dark Tiles Layer (No API Key Required)
-  const openFreeMapDark = L.tileLayer('https://tiles.openfreemap.org/styles/dark/{z}/{x}/{y}.png', {
+  // CartoDB Dark Matter (Sleek Dark Theme - 100% Free / No Key)
+  const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     maxZoom: 19,
-    attribution: 'Map data &copy; <a href="https://openfreemap.org" target="_blank" style="color: #60a5fa; text-decoration: none;">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" style="color: #64748b;">OpenStreetMap</a> contributors'
+    subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
   });
 
-  // OpenFreeMap Free Liberty / High-Detail Street Tiles Layer
-  const openFreeMapLiberty = L.tileLayer('https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png', {
+  // CartoDB Voyager (Clean High-Contrast Street View)
+  const cartoVoyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     maxZoom: 19,
-    attribution: 'Map data &copy; <a href="https://openfreemap.org" target="_blank" style="color: #60a5fa; text-decoration: none;">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" style="color: #64748b;">OpenStreetMap</a> contributors'
+    subdomains: 'abcd',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
   });
 
-  // OpenFreeMap Bright / High-Contrast Layer
-  const openFreeMapBright = L.tileLayer('https://tiles.openfreemap.org/styles/bright/{z}/{x}/{y}.png', {
+  // OpenStreetMap Standard Street Layer
+  const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: 'Map data &copy; <a href="https://openfreemap.org" target="_blank" style="color: #60a5fa; text-decoration: none;">OpenFreeMap</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" style="color: #64748b;">OpenStreetMap</a> contributors'
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
   });
 
   // Add default dark layer
-  openFreeMapDark.addTo(liveMap);
+  cartoDark.addTo(liveMap);
 
-  // Add layer controls for easy switching between free OpenFreeMap styles
+  // Add layer controls for switching styles
   const baseMaps = {
-    "🌌 OpenFreeMap Dark Radar": openFreeMapDark,
-    "🏙️ OpenFreeMap Liberty Street": openFreeMapLiberty,
-    "☀️ OpenFreeMap Bright Mode": openFreeMapBright
+    "🌌 Dark Radar (Default)": cartoDark,
+    "🏙️ Voyager Street Map": cartoVoyager,
+    "🗺️ OpenStreetMap": osmStandard
   };
   L.control.layers(baseMaps, null, { position: 'topright' }).addTo(liveMap);
 
