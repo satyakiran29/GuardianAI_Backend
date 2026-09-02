@@ -245,9 +245,16 @@ DJANGO_SECRET_KEY=your-secure-secret-key
 DEBUG=True
 ALLOWED_HOSTS=*
 
-# Supabase Realtime Integration (Optional)
-SUPABASE_URL=https://your-project-id.supabase.co
+# Supabase PostgreSQL (Permanent Cloud Storage)
+# Get from: Supabase Project Settings -> Database -> Connection string (URI)
+DATABASE_URL=postgresql://postgres.jwntzspmzapxablkmqhp:[YOUR-PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:6543/postgres
+
+# Supabase REST/Realtime Integration
+SUPABASE_URL=https://jwntzspmzapxablkmqhp.supabase.co
 SUPABASE_KEY=your-supabase-service-or-anon-key
+
+# Optional: Set to 'true' if you want to seed initial demo accounts on build
+SEED_DEMO_DATA=false
 ```
 
 ### 4. Database Setup & Demo Data Seeding
