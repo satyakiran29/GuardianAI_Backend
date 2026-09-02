@@ -11,10 +11,15 @@ from .views import (
     UserListView,
     EmergencyContactsView,
     HelplinesView,
-    DashboardStatsApiView
+    DashboardStatsApiView,
+    PingView
 )
 
 urlpatterns = [
+    # Health & 14-min Keep-Alive Ping
+    path('ping/', PingView.as_view(), name='api-ping'),
+    path('health/', PingView.as_view(), name='api-health'),
+
     # Authentication & OTP
     path('auth/send-otp/', SendOtpView.as_view(), name='api-send-otp'),
     path('auth/verify-otp/', VerifyOtpView.as_view(), name='api-verify-otp'),

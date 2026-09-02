@@ -434,3 +434,18 @@ class DashboardStatsApiView(APIView):
             'supabase_connected': True,
             'recent_alerts': recent_alerts
         }, status=status.HTTP_200_OK)
+
+
+class PingView(APIView):
+    """
+    Lightweight health check and keep-alive ping endpoint.
+    Used by 14-minute cron jobs to prevent Render/Heroku backend from sleeping.
+    """
+    def get(self, request):
+        return Response({
+            'status': 'healthy',
+            'timestamp': timezone.now().isoformat(),
+            'service': 'GuardianAI Backend Engine',
+            'state': 'online',
+            'keep_alive': True
+        }, status=status.HTTP_200_OK)

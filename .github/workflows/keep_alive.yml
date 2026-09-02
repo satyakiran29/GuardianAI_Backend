@@ -1,0 +1,23 @@
+name: ⚡ 14-Minute Keep-Alive Cron Job
+
+on:
+  schedule:
+    # Runs every 14 minutes (Render free tier sleeps after 15 min of inactivity)
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+    name: Ping GuardianAI Backend
+    steps:
+      - name: Ping Backend Health API
+        run: |
+          echo "📡 Pinging GuardianAI Cloud Backend to keep dyno alive..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://guardianai-backend-pwn5.onrender.com/api/ping/")
+          echo "Response HTTP Status: $STATUS"
+          if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
+            echo "✅ Backend is ONLINE and healthy!"
+          else
+            echo "⚠️ Unexpected response: $STATUS"
+          fi
