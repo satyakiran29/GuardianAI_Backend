@@ -116,7 +116,11 @@
             <span class="incident-status-tag tag-active">SOS ACTIVE</span>
           </div>
           <div class="incident-location">
-            <span>📍</span> {{ alert.address }}
+            {% if alert.latitude and alert.longitude %}
+              <a href="https://www.google.com/maps/search/?api=1&query={{ alert.latitude }},{{ alert.longitude }}" target="_blank" style="color: #60a5fa; text-decoration: none; font-weight: 600;" title="Open in Google Maps">📍 {{ alert.address }} ↗</a>
+            {% else %}
+              <span>📍</span> {{ alert.address }}
+            {% endif %}
           </div>
           <div style="font-size: 0.78rem; color: #f87171; margin-bottom: 10px;">
             Trigger: <strong>{{ alert.get_trigger_source_display }}</strong> • Siren: {% if alert.siren_active %}🔊 Loud Siren Active{% else %}Silent{% endif %}
@@ -131,6 +135,9 @@
               {% csrf_token %}
               <button type="submit" class="btn btn-emerald btn-sm">✓ Mark Safe &amp; Resolved</button>
             </form>
+            {% if alert.latitude and alert.longitude %}
+              <a href="https://www.google.com/maps/search/?api=1&query={{ alert.latitude }},{{ alert.longitude }}" target="_blank" class="btn btn-outline btn-sm" style="color: #60a5fa; border-color: #3b82f6;">🗺️ Google Maps</a>
+            {% endif %}
           </div>
         </div>
       {% empty %}
@@ -144,16 +151,23 @@
               <span class="incident-status-tag tag-dispatched">DISPATCHED</span>
             </div>
             <div class="incident-location">
-              <span>📍</span> {{ alert.address }}
+              {% if alert.latitude and alert.longitude %}
+                <a href="https://www.google.com/maps/search/?api=1&query={{ alert.latitude }},{{ alert.longitude }}" target="_blank" style="color: #60a5fa; text-decoration: none; font-weight: 600;" title="Open in Google Maps">📍 {{ alert.address }} ↗</a>
+              {% else %}
+                <span>📍</span> {{ alert.address }}
+              {% endif %}
             </div>
             <div style="font-size: 0.78rem; color: #fbbf24; margin-bottom: 10px;">
               Assigned Responder: <strong>{{ alert.responder.name|default:"Patrol Unit" }}</strong>
             </div>
-            <div class="incident-actions">
+            <div class="incident-actions" style="display: flex; gap: 8px;">
               <form method="POST" action="{% url 'dashboard-resolve-alert' alert.id %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-emerald btn-sm">✓ Confirm Safe Resolution</button>
               </form>
+              {% if alert.latitude and alert.longitude %}
+                <a href="https://www.google.com/maps/search/?api=1&query={{ alert.latitude }},{{ alert.longitude }}" target="_blank" class="btn btn-outline btn-sm" style="color: #60a5fa; border-color: #3b82f6;">🗺️ Google Maps</a>
+              {% endif %}
             </div>
           </div>
         {% empty %}
@@ -215,11 +229,17 @@
               {% endif %}
             </td>
             <td>
-              <span style="font-size: 0.82rem; color: var(--text-secondary);">📍 {{ user.last_address|default:"Location Pending" }}</span>
+              {% if user.last_latitude and user.last_longitude %}
+                <a href="https://www.google.com/maps/search/?api=1&query={{ user.last_latitude }},{{ user.last_longitude }}" target="_blank" style="font-size: 0.82rem; color: #60a5fa; text-decoration: none; font-weight: 500;" title="Open in Google Maps">
+                  📍 {{ user.last_address|default:"View on Map" }} ↗
+                </a>
+              {% else %}
+                <span style="font-size: 0.82rem; color: var(--text-secondary);">📍 {{ user.last_address|default:"Location Pending" }}</span>
+              {% endif %}
             </td>
             <td>
               <span style="font-weight: 700; {% if user.battery_level <= 15 %}color: #ef4444;{% else %}color: #10b981;{% endif %}">
-                {{ user.battery_level }}%
+                {{ user.battery_percentage }}%
               </span>
             </td>
             <td>

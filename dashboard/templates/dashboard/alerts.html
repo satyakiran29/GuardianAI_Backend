@@ -59,10 +59,12 @@
             </td>
             <td>
               <div style="font-size: 0.8rem; color: var(--text-secondary);">
-                📍 {{ alert.address }}
+                <a href="https://www.google.com/maps/search/?api=1&query={{ alert.latitude }},{{ alert.longitude }}" target="_blank" style="color: #60a5fa; text-decoration: none; font-weight: 500;" title="Open in Google Maps">
+                  📍 {{ alert.address }} ↗
+                </a>
               </div>
-              <div style="font-size: 0.72rem; color: var(--text-muted);">
-                GPS: <code>{{ alert.latitude|floatformat:4 }}, {{ alert.longitude|floatformat:4 }}</code>
+              <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
+                GPS: <a href="https://www.google.com/maps/search/?api=1&query={{ alert.latitude }},{{ alert.longitude }}" target="_blank" style="color: #94a3b8; text-decoration: underline;"><code>{{ alert.latitude|floatformat:4 }}, {{ alert.longitude|floatformat:4 }}</code></a>
               </div>
             </td>
             <td>

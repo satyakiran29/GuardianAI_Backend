@@ -87,15 +87,18 @@ function renderMapMarkers() {
         iconAnchor: [15, 15]
       });
 
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
+
       const popupContent = `
-        <div style="color: #0f172a; font-family: sans-serif; min-width: 220px;">
+        <div style="color: #0f172a; font-family: sans-serif; min-width: 230px;">
           <h4 style="margin: 0 0 6px; color: #ef4444; font-size: 14px; font-weight: bold;">🚨 SOS #${item.id} - ${item.status.toUpperCase()}</h4>
           <p style="margin: 0 0 4px; font-size: 12px;"><strong>Victim:</strong> ${item.user_name} (<code>${item.user_phone}</code>)</p>
           <p style="margin: 0 0 4px; font-size: 12px;"><strong>Trigger:</strong> ${item.trigger_source}</p>
           <p style="margin: 0 0 4px; font-size: 12px;"><strong>Battery:</strong> ${item.battery}%</p>
-          <p style="margin: 0 0 8px; font-size: 11px; color: #475569;">📍 ${item.address}</p>
-          <div style="display: flex; gap: 6px; margin-top: 6px;">
-            <a href="/alerts/" style="background: #ef4444; color: #fff; padding: 4px 10px; text-decoration: none; border-radius: 4px; font-size: 11px; font-weight: bold;">⚡ Dispatch Unit</a>
+          <p style="margin: 0 0 8px; font-size: 11px; color: #475569;">📍 <a href="${googleMapsUrl}" target="_blank" style="color: #2563eb; font-weight: 600; text-decoration: none;">${item.address} ↗</a></p>
+          <div style="display: flex; gap: 6px; margin-top: 8px;">
+            <a href="/alerts/" style="background: #ef4444; color: #fff; padding: 5px 10px; text-decoration: none; border-radius: 6px; font-size: 11px; font-weight: bold;">⚡ Dispatch Unit</a>
+            <a href="${googleMapsUrl}" target="_blank" style="background: #2563eb; color: #fff; padding: 5px 10px; text-decoration: none; border-radius: 6px; font-size: 11px; font-weight: bold;">🗺️ Google Maps ↗</a>
           </div>
         </div>
       `;
@@ -126,12 +129,15 @@ function renderMapMarkers() {
         iconAnchor: [13, 13]
       });
 
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
+
       const guardPopup = `
-        <div style="color: #0f172a; font-family: sans-serif; min-width: 180px;">
+        <div style="color: #0f172a; font-family: sans-serif; min-width: 190px;">
           <h4 style="margin: 0 0 4px; color: #10b981; font-size: 13px; font-weight: bold;">🛡️ Guardian Unit</h4>
           <p style="margin: 0 0 2px; font-size: 12px;"><strong>${item.name}</strong></p>
           <p style="margin: 0 0 4px; font-size: 11px; color: #475569;">📞 ${item.phone}</p>
-          <p style="margin: 0; font-size: 11px; color: #64748b;">📍 ${item.address || 'Patrol Route'}</p>
+          <p style="margin: 0 0 6px; font-size: 11px; color: #64748b;">📍 ${item.address || 'Patrol Route'}</p>
+          <a href="${googleMapsUrl}" target="_blank" style="background: #059669; color: #fff; padding: 4px 8px; text-decoration: none; border-radius: 4px; font-size: 10px; font-weight: bold; display: inline-block;">🗺️ Google Maps ↗</a>
         </div>
       `;
 
