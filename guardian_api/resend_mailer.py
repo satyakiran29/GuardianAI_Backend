@@ -1,63 +1,50 @@
 """
-Resend Transactional Email Engine for GuardianAI
-Dispatches HTML OTP codes and SOS Emergency Alert broadcasts.
+Transactional Email Engine for GuardianAI
+Dispatches HTML OTP codes and SOS Emergency Alert broadcasts via Gmail SMTP.
 """
 import os
 import logging
-import requests
+import threading
 from django.conf import settings
-
-logger = logging.getLogger(__name__)
-
-RESEND_API_URL = "https://api.resend.com/emails"
-
-def get_resend_api_key():
-    return getattr(settings, 'RESEND_API_KEY', None) or os.getenv('RESEND_API_KEY', '')
-
-
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
 
-def send_email_via_resend(to_email, subject, html_content, from_email=None):
+logger = logging.getLogger(__name__)
+
+def _send_email_task(to_email, subject, html_content, from_email=None):
     """
-    Core function to dispatch transactional emails via Gmail SMTP with Resend fallback.
+    Background worker function to dispatch transactional emails safely via Gmail SMTP.
     """
     from_email = from_email or getattr(settings, 'DEFAULT_FROM_EMAIL', 'GuardianAI Safety <satyakiran294@gmail.com>')
     recipients = [to_email] if isinstance(to_email, str) else to_email
 
-    # Method 1: Try Django Gmail SMTP (High reliability)
     try:
         text_content = strip_tags(html_content)
         msg = EmailMultiAlternatives(subject, text_content, from_email, recipients)
         msg.attach_alternative(html_content, "text/html")
-        msg.send(fail_silently=False)
-        logger.info(f"📧 [Gmail SMTP] Email successfully sent to {to_email}")
+        msg.send(fail_silently=True)
+        logger.info(f"📧 [Gmail SMTP] Email dispatched to {to_email}")
         return True
     except Exception as smtp_err:
-        logger.warning(f"⚠️ [Gmail SMTP] Failed: {smtp_err}. Trying Resend fallback...")
+        logger.warning(f"⚠️ [Gmail SMTP] Exception while sending to {to_email}: {smtp_err}")
+        return False
 
-    # Method 2: Resend REST API Fallback
-    api_key = get_resend_api_key()
-    if api_key:
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "from": "GuardianAI Safety <onboarding@resend.dev>",
-            "to": recipients,
-            "subject": subject,
-            "html": html_content
-        }
-        try:
-            response = requests.post(RESEND_API_URL, json=payload, headers=headers, timeout=10)
-            if response.status_code in (200, 201):
-                logger.info(f"📧 [Resend] Email sent to {to_email} (ID: {response.json().get('id')})")
-                return True
-        except Exception as e:
-            logger.error(f"❌ [Resend] Exception: {e}")
 
-    return False
+def send_email_via_resend(to_email, subject, html_content, from_email=None):
+    """
+    Non-blocking async dispatch of emails to guarantee zero HTTP request latency and zero worker timeouts.
+    """
+    try:
+        t = threading.Thread(
+            target=_send_email_task,
+            args=(to_email, subject, html_content, from_email),
+            daemon=True
+        )
+        t.start()
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to spawn email thread: {e}")
+        return False
 
 
 def send_otp_email(to_email, otp_code, purpose="Authentication"):
