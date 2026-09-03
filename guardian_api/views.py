@@ -353,8 +353,31 @@ class LocationPingView(APIView):
             if battery_level is not None:
                 user.battery_level = int(battery_level)
             user.save()
-            sync_user_to_supabase(user)
-            return Response({'status': 'success', 'message': 'Location telemetry updated'}, status=status.HTTP_200_OK)
+            supabase_synced = sync_user_to_supabase(user)
+
+            # Also update any active emergency alert for this user
+            active_alert = EmergencyAlert.objects.filter(user=user, status='active').order_by('-timestamp').first()
+            if active_alert and latitude is not None and longitude is not None:
+                active_alert.latitude = float(latitude)
+                active_alert.longitude = float(longitude)
+                if address:
+                    active_alert.address = address
+                if battery_level is not None:
+                    active_alert.battery_level = int(battery_level)
+                active_alert.save()
+
+            return Response({
+                'status': 'success',
+                'message': 'Location telemetry updated and synced to Supabase',
+                'user': {
+                    'id': user.id,
+                    'phone': user.phone,
+                    'latitude': user.last_latitude,
+                    'longitude': user.last_longitude,
+                    'battery': user.battery_level
+                },
+                'supabase_synced': supabase_synced
+            }, status=status.HTTP_200_OK)
 
         return Response({'status': 'error', 'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
