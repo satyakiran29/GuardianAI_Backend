@@ -12,6 +12,33 @@ from guardian_api.models import UserProfile, EmergencyAlert, OtpRecord, Emergenc
 from guardian_api.supabase_client import sync_user_to_supabase, sync_alert_to_supabase
 
 
+def find_user_by_identifier(identifier, user_id=None):
+    """
+    Robust lookup for user by ID, email, exact phone, or phone with/without '+' and spaces.
+    """
+    if user_id:
+        u = UserProfile.objects.filter(id=user_id).first()
+        if u: return u
+
+    if not identifier:
+        return None
+
+    raw = str(identifier).strip()
+    plus_ver = raw if raw.startswith('+') else f"+{raw.lstrip()}"
+    space_fix = raw.replace(' ', '+')
+    digits_only = ''.join(c for c in raw if c.isdigit())
+    last10 = digits_only[-10:] if len(digits_only) >= 10 else digits_only
+
+    return UserProfile.objects.filter(
+        Q(email__iexact=raw) |
+        Q(phone=raw) |
+        Q(phone=plus_ver) |
+        Q(phone=space_fix) |
+        (Q(phone__endswith=last10) if last10 else Q(pk__isnull=True))
+    ).first()
+
+
+
 
 def dashboard_login_required(view_func):
     """
@@ -238,10 +265,18 @@ def index(request):
 
 @dashboard_login_required
 def users_view(request):
+    current_user = getattr(request, 'dashboard_user', None)
     role_filter = request.GET.get('role', '')
     search_query = request.GET.get('q', '').strip()
     
-    users = UserProfile.objects.all().prefetch_related('guardian_links__guardian', 'ward_links__user').order_by('-created_at')
+    if current_user and current_user.role == 'user':
+        # Protected user login: Access own profile and assigned guardians (My Guardians)
+        users = UserProfile.objects.filter(
+            Q(id=current_user.id) | Q(ward_links__user=current_user)
+        ).distinct().prefetch_related('guardian_links__guardian', 'ward_links__user')
+    else:
+        users = UserProfile.objects.all().prefetch_related('guardian_links__guardian', 'ward_links__user').order_by('-created_at')
+    
     if role_filter:
         users = users.filter(role=role_filter)
     if search_query:
@@ -355,15 +390,23 @@ def guardian_hub_view(request):
     Enables Guardians and SuperAdmins to track wards' battery %, GPS, and chat.
     """
     current_user = getattr(request, 'dashboard_user', None)
+    if current_user and current_user.role == 'user':
+        messages.warning(request, "Guardian Hub & Portal is reserved for verified Guardians and Responders.")
+        return redirect('dashboard-index')
     
-    # If superadmin, allow inspecting all wards or specific guardian's wards
+    # Role-Based Data Isolation:
+    # A Guardian (e.g. skdad) can ONLY access their own assigned wards (e.g. sk).
+    # Superadmin can access all users data and switch between any guardian units.
     selected_guardian_id = request.GET.get('guardian_id')
-    if selected_guardian_id:
-        active_guardian = UserProfile.objects.filter(id=selected_guardian_id).first()
-    elif current_user and current_user.role == 'guardian':
+    if current_user.role == 'guardian':
         active_guardian = current_user
+    elif current_user.role == 'superadmin':
+        if selected_guardian_id:
+            active_guardian = UserProfile.objects.filter(id=selected_guardian_id).first()
+        else:
+            active_guardian = None
     else:
-        active_guardian = UserProfile.objects.filter(role='guardian').first() or current_user
+        active_guardian = current_user
 
     all_guardians = UserProfile.objects.filter(role='guardian', is_active=True).order_by('name')
     all_users = UserProfile.objects.filter(role='user', is_active=True).order_by('name')

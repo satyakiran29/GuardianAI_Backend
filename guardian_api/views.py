@@ -531,15 +531,17 @@ class GuardianLinkView(APIView):
         user = find_user_by_identifier(phone, user_id)
 
         if not user:
-            # Return all links if superadmin/general query
-            links = GuardianLink.objects.all().order_by('-created_at')
-            serializer = GuardianLinkSerializer(links, many=True)
-            return Response({'status': 'success', 'links': serializer.data}, status=status.HTTP_200_OK)
+            return Response({'status': 'error', 'message': 'Valid user phone or user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # If user is a guardian, return their wards
-        if user.role == 'guardian' or role == 'guardian':
+        # ROLE-BASED ACCESS CONTROL:
+        if user.role == 'superadmin':
+            # Superadmin can view all guardian-ward links
+            links = GuardianLink.objects.all().order_by('-created_at')
+        elif user.role == 'guardian' or role == 'guardian':
+            # Guardian (e.g. skdad) can ONLY view their own assigned wards (e.g. sk)
             links = GuardianLink.objects.filter(guardian=user).order_by('-created_at')
         else:
+            # User (e.g. sk) can ONLY view their own assigned guardians (e.g. skdad)
             links = GuardianLink.objects.filter(user=user).order_by('-created_at')
 
         serializer = GuardianLinkSerializer(links, many=True)
@@ -639,9 +641,26 @@ class GuardianTrackedWardsView(APIView):
         if not guardian:
             return Response({'status': 'error', 'message': 'Guardian not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        links = GuardianLink.objects.filter(guardian=guardian, status='active').select_related('user')
+        if guardian.role == 'user':
+            return Response({
+                'status': 'error',
+                'message': 'Access restricted: Guardian Portal and ward tracking telemetry are only accessible by verified Guardians and Responders. Users can access My Guardians.'
+            }, status=status.HTTP_403_FORBIDDEN)
 
         tracked_wards = []
+
+        # ROLE-BASED ACCESS CONTROL:
+        # Superadmin can access ALL users data across the platform
+        if guardian.role == 'superadmin':
+            target_guardian_id = request.query_params.get('target_guardian_id')
+            if target_guardian_id:
+                links = GuardianLink.objects.filter(guardian_id=target_guardian_id, status='active').select_related('user', 'guardian')
+            else:
+                links = GuardianLink.objects.filter(status='active').select_related('user', 'guardian')
+        else:
+            # STRICT: Guardian ONLY accesses their own assigned wards (e.g. skdad only accesses sk)
+            links = GuardianLink.objects.filter(guardian=guardian, status='active').select_related('user')
+
         for link in links:
             ward = link.user
             active_alert = EmergencyAlert.objects.filter(user=ward, status='active').order_by('-timestamp').first()
@@ -667,9 +686,31 @@ class GuardianTrackedWardsView(APIView):
                 'address': ward.last_address,
                 'has_active_sos': active_alert is not None,
                 'sos_details': EmergencyAlertSerializer(active_alert).data if active_alert else None,
-                'last_updated': ward.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'last_updated': ward.updated_at.strftime('%Y-%m-%d %H:%M:%S') if ward.updated_at else '',
                 'is_online': True
             })
+
+        # If superadmin and no links exist yet, include all users with role 'user'
+        if guardian.role == 'superadmin' and not tracked_wards and not request.query_params.get('target_guardian_id'):
+            for ward in UserProfile.objects.filter(role='user'):
+                active_alert = EmergencyAlert.objects.filter(user=ward, status='active').order_by('-timestamp').first()
+                tracked_wards.append({
+                    'link_id': ward.id,
+                    'ward_id': ward.id,
+                    'name': ward.name,
+                    'phone': ward.phone,
+                    'email': ward.email,
+                    'relationship': 'Unlinked User',
+                    'battery_level': ward.battery_level,
+                    'battery_status': 'Good' if ward.battery_level > 30 else 'Low Battery',
+                    'latitude': ward.last_latitude,
+                    'longitude': ward.last_longitude,
+                    'address': ward.last_address,
+                    'has_active_sos': active_alert is not None,
+                    'sos_details': EmergencyAlertSerializer(active_alert).data if active_alert else None,
+                    'last_updated': ward.updated_at.strftime('%Y-%m-%d %H:%M:%S') if ward.updated_at else '',
+                    'is_online': True
+                })
 
         return Response({
             'status': 'success',
