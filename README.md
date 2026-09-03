@@ -1,368 +1,338 @@
-# 🛡️ GuardianAI Backend — Emergency Safety & Incident Command Platform
+<div align="center">
+  # 🛡️ GuardianAI
+  ### *Autonomous Women Safety, Telemetric Emergency Response, Multi-Role Command & Guardian Ecosystem*
 
-[![Django](https://img.shields.io/badge/Django-5.0+-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
-[![Django REST Framework](https://img.shields.io/badge/DRF-3.14+-a30000?style=for-the-badge&logo=django&logoColor=white)](https://www.django-rest-framework.org/)
-[![Supabase](https://img.shields.io/badge/Supabase-Realtime-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
+  [![Android App v1.1.1](https://img.shields.io/badge/Android%20App-v1.1.1%20(Build%2012)-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://raw.githubusercontent.com/satyakiran29/GuardianAI/main/Apk/GuardianAI-debug.apk)
+  [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Java%20%26%20XML-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/)
+  [![Django Backend](https://img.shields.io/badge/Backend-Django%206%20%2B%20REST%20Framework-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
+  [![Cloud Database](https://img.shields.io/badge/Cloud-Supabase%20Realtime-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+  [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 
-**GuardianAI** (also known as *SheGuard*) is a mission-critical backend engine and real-time emergency incident command platform designed for women safety, personal protection, and rapid guardian dispatch. 
-
-It provides secure RESTful APIs for mobile and IoT clients, live location telemetry tracking, multi-channel SOS triggers, automated OTP verification, Supabase real-time cloud synchronization, and a centralized web-based Command & Control Dashboard.
-
----
-
-## 🌟 Key Features
-
-### 🚨 1. Real-Time Emergency SOS & Incident Dispatch
-- **Multi-Modal SOS Triggers**: Handles trigger signals from hardware SOS buttons, shake gestures, voice keywords, safety timer expirations, critical low-battery alerts (15%), safe mode broadcasts, and trip route divergences.
-- **Live Location Telemetry**: Continuous GPS ping ingestion with address reverse-geocoding, battery status monitoring, and siren tracking.
-- **Incident Lifecycle Management**: Immediate alert broadcast (`active`), responder dispatch (`dispatched`), and resolution tracking with incident notes (`resolved`).
-
-### 🔐 2. Authentication & Verification Gateway
-- **Dynamic OTP Dispatch & Verification**: Time-expiring (10 min) 6-digit numeric OTP generation and verification for registration and logins.
-- **Multi-Role User Hierarchy**:
-  - `superadmin`: Full platform control, user privilege modification, telemetry audits, and data exports.
-  - `guardian`: Trusted responders, emergency contact dispatchers, and resolution officers.
-  - `user`: Protected citizens and app users with active emergency telemetry broadcast.
-- **Master Passcodes**: Built-in test passcodes (`123456` OTP, `admin123` / `guardian123` passwords) for seamless testing and demonstration.
-
-### 🌐 3. Supabase Real-Time Cloud Integration
-- Real-time synchronization of users, emergency SOS events, emergency contacts, and OTP logs to Supabase PostgreSQL.
-- Enables instant websocket event broadcasting across mobile applications and operations dashboards.
-
-### 🖥️ 4. Mission Command Center (Web Dashboard)
-- **Live Incident Radar**: Real-time visual tracking of active emergency events and battery levels.
-- **Incident Dispatch & Action Center**: One-click responder assignment, siren controls, and alert resolution.
-- **User Management & Role Switching**: Instant privilege elevation and user status controls.
-- **Data Export**: Comprehensive CSV export for reporting, audit logging, and incident compliance.
-- **Live OTP Telemetry Monitor**: Visual tracking of incoming authentication codes and validity states.
-
-### 📞 5. Emergency Helplines & Contacts Directory
-- Integrated directory of national emergency helplines (112, 1091 Women Helpline, 1930 Cyber Crime, 100 Police, 108 Ambulance, 18005990019 KIRAN Mental Health).
-- User-specific primary and secondary emergency contact management.
+  <p align="center">
+    <a href="#-downloads--release-artifacts">📱 Download Latest APK</a> •
+    <a href="#-dedicated-role-based-dashboards">🛡️ Role Dashboards</a> •
+    <a href="#-system-architecture">🏗️ Architecture</a> •
+    <a href="#-multi-role-access-control--data-isolation">👥 Role Isolation</a> •
+    <a href="#-rest-api-reference">🔌 REST API</a> •
+    <a href="#-installation--setup-guide">🚀 Setup Guide</a>
+  </p>
+</div>
 
 ---
 
-## 🏗️ System Architecture & Flowcharts
+## 📌 Table of Contents
+1. [Overview & Mission](#-overview--mission)
+2. [Downloads & Release Artifacts](#-downloads--release-artifacts)
+3. [Dedicated Role-Based Dashboards](#-dedicated-role-based-dashboards)
+4. [Multi-Role Access Control & Data Isolation](#-multi-role-access-control--data-isolation)
+5. [End-to-End System Architecture](#-end-to-end-system-architecture)
+6. [Emergency SOS Telemetry & Dispatch Flowchart](#-emergency-sos-telemetry--dispatch-flowchart)
+7. [Guardian Link & Real-Time Safety Chat](#-guardian-link--real-time-safety-chat)
+8. [Comprehensive Features Breakdown](#-comprehensive-features-breakdown)
+9. [Django & Supabase Cloud Command Dashboard](#-django--supabase-cloud-command-dashboard)
+10. [REST API Reference](#-rest-api-reference)
+11. [Installation & Setup Guide](#-installation--setup-guide)
+12. [Automated Verification Test Suite](#-automated-verification-test-suite)
+13. [Engineering Team & Credits](#-engineering-team--credits)
 
-### 1. High-Level System Architecture Flow
+---
+
+## 🌟 Overview & Mission
+
+**GuardianAI** (also known as *SheGuard*) is an autonomous personal safety, live telemetry escort, and emergency incident dispatch ecosystem designed specifically for women, vulnerable citizens, and security teams.
+
+The platform connects a native **Android Client (Java + XML UI)** with an intelligent **Django 6 + Supabase Cloud Incident Command Center**, offering multi-modal panic detection, ward-to-guardian live tracking, critical low-battery alerts, real-time safety chat, and cryptographic 6-digit OTP security.
+
+---
+
+## 📥 Downloads & Release Artifacts
+
+| Artifact | Version | File Size | Direct Download |
+| :--- | :---: | :---: | :--- |
+| **Android Safety App (Debug APK)** | **v1.1.1 (Build 12)** | ~16.8 MB | [Download GuardianAI-debug.apk](https://raw.githubusercontent.com/satyakiran29/GuardianAI/main/Apk/GuardianAI-debug.apk) |
+| **OTA Update Manifest** | **v1.1.1** | ~687 B | [View update.json](https://raw.githubusercontent.com/satyakiran29/GuardianAI/main/Apk/update.json) |
+| **Backend Release Package** | **v1.1.1** | ~16.8 MB | [Backend APK Release](https://raw.githubusercontent.com/satyakiran29/GuardianAI/main/Backend/GuardianAI-Safety-Debug.apk) |
+
+---
+
+## 🛡️ Dedicated Role-Based Dashboards
+
+GuardianAI features **3 distinct, tailored mobile experiences** based on the authenticated user's role:
 
 ```mermaid
-flowchart TB
-    subgraph CLIENTS["📱 Client Tier"]
-        MA["Mobile Application (iOS / Android)"]
-        IOT["Wearable / IoT Safety Devices"]
-        WEB_CLIENT["Web Portal Client"]
-    end
+graph TD
+    Login[Authentication / App Launch] --> Check{Role in Prefs}
+    Check -->|'user'| UserHome["🌸 Protected User Safety Home<br/>(HomeFragment)"]
+    Check -->|'guardian'| GuardianHome["🛡️ Guardian Command Desk<br/>(GuardianHomeFragment)"]
+    Check -->|'superadmin'| AdminHome["👑 Platform Control Center<br/>(SuperAdminHomeFragment)"]
+```
 
-    subgraph API_GATEWAY["🛡️ GuardianAI Backend (Django REST Framework)"]
-        direction TB
-        MW["Security, CORS & WhiteNoise Middleware"]
-        ROUTER["URL Dispatcher & Router"]
+### 1. 🛡️ Guardian Command Desk (`GuardianHomeFragment`)
+- **Active Protector Header**: Unit status badge, protector name, and phone.
+- **🚨 Critical Distress Emergency Card**: Appears with high-priority red styling when an assigned ward triggers an SOS, offering instant **1-Click Call Ward** (`ACTION_DIAL`) and **Navigate GPS** (`Google Maps Intent`).
+- **Live Ward Radar**: Displays live battery percentage gauges (green >30%, orange <30%, red critical low ≤15%), real-time street address, and live coordinates.
+- **Direct Ward Actions**: Quick-access **💬 Live Chat**, **📞 Call**, and **📍 Map Radar** on every ward card.
+- **Protector Controls**: `+ Link Ward` dialog and `📡 Ping GPS` to share current guardian coordinates.
+- **Background Polling**: Automatically refreshes ward telemetry every 15 seconds.
+
+### 2. 👑 SuperAdmin Platform Control Center (`SuperAdminHomeFragment`)
+- **Executive KPI Metrics Grid (2x2)**:
+  - 👥 **Total Users**: Platform registered citizen count.
+  - 🛡️ **Guardian Units**: Active responder units deployed.
+  - 🚨 **Active SOS**: Live emergency distress incidents.
+  - 🔋 **Low Battery**: Citizens with critical battery (<15%).
+- **Live SOS Monitor**: System-wide broadcast feed for active emergency alerts across all registered citizens.
+- **Global User & Guardian Directory**: Live search by name, phone, or email with filter chips (`[All]`, `[Users]`, `[Guardians]`) and direct chat/call triggers.
+
+### 3. 🌸 Protected User Safety Home (`HomeFragment`)
+- Consumer safety suite featuring the large pulsating **1-Tap SOS button**, Shake-to-SOS listener, Voice keyword trigger, Fake Call simulator, Safe Ride monitor, Safety Timer, and **🛡️ My Guardians** escort directory.
+
+---
+
+## 👥 Multi-Role Access Control & Data Isolation
+
+To protect citizen privacy, GuardianAI enforces strict data scoping across all tiers:
+
+| Role | Badge | Guardian Portal Access | Data Visibility Scope | Example Scenario (`sk` & `skdad`) |
+| :--- | :---: | :---: | :--- | :--- |
+| **Protected User** | `🌸 USER` | ❌ **Blocked (`403 Forbidden`)** | Can **ONLY** view their assigned guardians via **"My Guardians"**. Guardian Portal telemetry is restricted. | `sk` accesses My Guardians to view `skdad`. Cannot access other citizens' telemetry. |
+| **Guardian** | `🛡️ GUARDIAN` | ✅ **Allowed** | **Strictly isolated**: Can **ONLY** track and view data for their assigned wards. | `skdad` **ONLY** sees `sk` on their radar and chat. Cannot see wards of other guardians. |
+| **SuperAdmin** | `👑 SUPERADMIN` | ✅ **Allowed** | **Omniscient access**: Full platform visibility over all users, guardians, wards, and incidents. | SuperAdmin monitors all platform telemetry, audits OTP logs, and oversees dispatches. |
+
+---
+
+## 🏗️ End-to-End System Architecture
+
+```mermaid
+graph TB
+    subgraph ClientTier ["📱 Native Android Client Tier (Java & XML UI)"]
+        A1["Onboarding Carousel & Auth<br/>(Email / Password / 6-Digit Phone OTP)"] --> Router{"Role-Based Home Router"}
+        Router -->|'user'| UH["🌸 User Safety Home<br/>(1-Tap SOS + My Guardians)"]
+        Router -->|'guardian'| GH["🛡️ Guardian Command Desk<br/>(Ward Radar + Battery % + Chat)"]
+        Router -->|'superadmin'| SH["👑 SuperAdmin Control Center<br/>(Platform KPIs + Global Directory)"]
         
-        subgraph CORE_APPS["Application Modules"]
-            AUTH["🔐 Auth & OTP Gateway<br/>(Send / Verify / Passcode Bypass)"]
-            SOS_ENGINE["🚨 SOS & Telemetry Engine<br/>(Triggers / GPS Pings / Geo-Reverse)"]
-            MGMT["👥 User & Contact Directory<br/>(Profiles / Roles / Helplines)"]
-            DASH_ENGINE["🖥️ Mission Control Web Views<br/>(Triage / Dispatch / Role Switch / CSV)"]
+        subgraph SafetyEngines ["Sensors & Safety Tools"]
+            S1["1-Tap Big SOS Button"]
+            S2["Shake Gesture Detector<br/>(Accelerometer)"]
+            S3["Voice Keyword Trigger<br/>('Help' / 'Guardian SOS')"]
+            S4["Safety Timer & Check-In"]
+            S5["Fake Call Simulator"]
+            S6["AI Safety Advisor"]
+            S7["Safe Mode & App Killer"]
+            S8["15% Battery Auto-Alert"]
         end
-
-        DB_ORM["Django ORM Layer"]
+        UH --> SafetyEngines
     end
 
-    subgraph PERSISTENCE["💾 Data & Real-Time Sync Tier"]
-        SQLITE[("Local SQLite Database<br/>(db.sqlite3)")]
-        SUPABASE[("⚡ Supabase PostgreSQL<br/>(Cloud Storage)")]
-        REALTIME["📡 Supabase Realtime<br/>(WebSocket Publication)"]
+    subgraph BackendTier ["🖥️ Backend & Incident Command Tier (Django 6)"]
+        B1["Django REST Framework API<br/>(/api/guardians/*, /api/chat/*, /api/sos/*)"]
+        B2["Role Scoping & Isolation Guard<br/>(Strict Guardian-Ward Data Filter)"]
+        B3["OTP Generator & Inspector<br/>(10-Min Lifecycle & Passcode Vault)"]
+        B4["Command Center Web UI<br/>(Leaflet.js Interactive Dark Radar)"]
+        B5["Web Guardian Hub & Chat Console<br/>(/guardian-hub/)"]
     end
 
-    subgraph RESPONDERS["🚨 First Responders & Operations Tier"]
-        DASHBOARD["🖥️ Live Command Center Dashboard<br/>(Incident Radar & Action Panel)"]
-        POLICE["🚓 Police / 112 Emergency Dispatch"]
-        GUARDIANS["👨‍👩‍👧 Family & Trusted Guardians"]
+    subgraph CloudTier ["☁️ Cloud & Database Tier (Supabase & Firebase)"]
+        C1[("Supabase Real-Time PostgreSQL<br/>guardian_users, emergency_alerts<br/>guardian_links, chat_messages, otp_records")]
+        C2[("Firebase Cloud Messaging (FCM)<br/>Emergency Broadcast Notifications")]
     end
 
-    %% Client to Backend
-    MA -->|HTTPS / REST API| MW
-    IOT -->|Hardware SOS / Telemetry| MW
-    WEB_CLIENT -->|Session Auth / HTTP| MW
-    MW --> ROUTER
-    ROUTER --> AUTH
-    ROUTER --> SOS_ENGINE
-    ROUTER --> MGMT
-    ROUTER --> DASH_ENGINE
+    subgraph DispatchChannels ["🚨 Multi-Channel Telemetry Fan-Out"]
+        D1["SMS Dispatcher<br/>(SmsManager with Live Google Maps Pin)"]
+        D2["WhatsApp Live Location Broadcaster<br/>(Automated Message + Coordinates)"]
+        D3["Police Siren Audio Generator<br/>(100% Volume Alarm)"]
+        D4["112 Emergency Auto-Dialer"]
+        D5["Live Radar Pulse on Command Dashboard"]
+    end
 
-    %% Backend to Database & Supabase
-    AUTH & SOS_ENGINE & MGMT & DASH_ENGINE --> DB_ORM
-    DB_ORM --> SQLITE
-    SOS_ENGINE -.->|Cloud Upsert & Sync| SUPABASE
-    MGMT -.->|User Profiles Sync| SUPABASE
-    SUPABASE --> REALTIME
-
-    %% Realtime to Operations
-    REALTIME ==>|Live Push Alert| DASHBOARD
-    DASH_ENGINE --> DASHBOARD
-    DASHBOARD -->|Dispatch Action| POLICE
-    DASHBOARD -->|Notification Alert| GUARDIANS
+    %% Wiring
+    SafetyEngines -->|REST Telemetry Beacon| B1
+    GH -->|Tracked Wards API| B1
+    SH -->|Platform Stats API| B1
+    B1 --> B2 --> C1
+    B1 --> B4
+    B1 --> B5
+    SafetyEngines --> DispatchChannels
 ```
 
 ---
 
-### 2. Emergency SOS Incident Lifecycle & Resolution Flowchart
+## 🚨 Emergency SOS Telemetry & Dispatch Flowchart
 
 ```mermaid
-flowchart TD
-    START(["🚨 Emergency Trigger Event"])
+sequenceDiagram
+    autonumber
+    actor Victim as 🌸 Protected Citizen (e.g. sk)
+    participant App as 📱 GuardianAI App
+    participant Sensors as 🧭 GPS & Battery Sensors
+    participant Backend as 🖥️ Django Backend
+    participant Supabase as ☁️ Supabase Cloud
+    participant Contacts as 👥 Emergency Contacts
+    actor Guardian as 🛡️ Assigned Guardian (e.g. skdad)
+
+    Victim->>App: Triggers SOS (1-Tap Button / Shake / Voice / Timer / Battery 15%)
+    App->>Sensors: Fast-path GPS Location & Battery Fix
+    Sensors-->>App: Coordinates (17.4482 N, 78.3914 E), 14% Battery
     
-    subgraph TRIGGERS["Trigger Sources"]
-        T1["SOS Button Press"]
-        T2["Device Shake Detection"]
-        T3["Voice Keyword Activation"]
-        T4["Safety Timer Expiration"]
-        T5["Battery Critical (&lt; 15%)"]
-        T6["Route Divergence / Geofence"]
+    par Multi-Channel Local Dispatch
+        App->>Contacts: 📩 Emergency SMS with Live Google Maps Link
+        App->>Contacts: 💬 WhatsApp Alert with Coordinates
+        App->>App: 🔊 Activate Loud Police Siren (100% Vol)
+        App->>App: 📳 Pulse Haptic Pattern
+    and Cloud Command Synchronization
+        App->>Backend: POST /api/sos/trigger/ (Phone, GPS, Battery, Siren)
+        Backend->>Supabase: Insert into emergency_alerts
+        Backend-->>App: Alert Broadcasted (#SOS ID)
     end
 
-    TRIGGERS --> START
-
-    START --> POST_ALERT["POST /api/sos/trigger/"]
-    
-    subgraph BACKEND_PROCESSING["Backend Processing Pipeline"]
-        VALIDATE["Validate & Associate User Profile"]
-        LOG_DB["Create EmergencyAlert in Database (Status: Active)"]
-        UPDATE_LOC["Update GPS Telemetry (Lat, Lng, Address)"]
-        SYNC_CLOUD["Sync to Supabase Realtime Table: emergency_alerts"]
-    end
-
-    POST_ALERT --> VALIDATE
-    VALIDATE --> LOG_DB
-    LOG_DB --> UPDATE_LOC
-    UPDATE_LOC --> SYNC_CLOUD
-
-    SYNC_CLOUD --> BROADCAST{{"📡 Real-Time Incident Broadcast"}}
-
-    subgraph ACTION_COMMAND["Mission Command & Dispatch"]
-        RADAR["Web Dashboard Live Radar Alarm Triggers"]
-        NOTIF["Emergency Contacts Alerted"]
-        DISPATCH_DECISION{"Responder Action"}
-    end
-
-    BROADCAST --> RADAR
-    BROADCAST --> NOTIF
-    RADAR --> DISPATCH_DECISION
-
-    DISPATCH_DECISION -->|Dispatch Guardian/Police| DISPATCHED["Status: Dispatched<br/>POST /dashboard/alerts/&lt;id&gt;/dispatch/"]
-    DISPATCHED --> ASSIST["Responder Reaches Citizen & Secures Area"]
-    ASSIST --> RESOLVE["POST /api/sos/resolve/<br/>Status: Resolved"]
-    DISPATCH_DECISION -->|False Alarm / Direct Safe| RESOLVE
-
-    RESOLVE --> ARCHIVE[("Incident Logged, Timestamped & Archived")]
-    ARCHIVE --> END(["✅ Situation Safe & Closed"])
+    Backend->>Guardian: 🚨 Real-time Distress Card Beeps on Guardian Command Desk
+    Guardian->>App: Taps "📍 Navigate GPS" or "📞 Call Ward"
+    Guardian->>Backend: Updates incident status -> 'dispatched'
+    Guardian->>Victim: Rescues citizen & confirms safe check-in
+    Guardian->>Backend: Marks SOS as 'resolved'
+    Backend->>Supabase: Update status -> 'resolved'
 ```
 
 ---
 
-## 📂 Project Structure
+## 💬 Guardian Link & Real-Time Safety Chat
 
-```
-GuardianAI_Backend/
-├── manage.py                   # Django project CLI entrypoint
-├── requirements.txt            # Python dependencies
-├── Procfile                    # Deployment process configuration (Gunicorn)
-├── build.sh                    # Automated build, migration & seed script
-├── runtime.txt                 # Python runtime version definition
-├── db.sqlite3                  # Local SQLite database
-├── supabase_schema.sql         # Supabase PostgreSQL schema & realtime policies
-├── guardian_backend/           # Core Django project configuration
-│   ├── __init__.py
-│   ├── asgi.py
-│   ├── settings.py             # App settings, CORS, Whitenoise, Supabase keys
-│   ├── urls.py                 # Root URL router
-│   └── wsgi.py
-├── guardian_api/               # RESTful API application
-│   ├── models.py               # UserProfile, EmergencyAlert, OtpRecord, TripLog, EmergencyContact
-│   ├── serializers.py          # DRF Serializers
-│   ├── views.py                # API endpoints (Auth, SOS, Telemetry, Contacts)
-│   ├── urls.py                 # API route definitions (`/api/...`)
-│   ├── supabase_client.py      # Supabase cloud sync integration
-│   └── management/commands/
-│       └── seed_demo_data.py   # Seeder for demo accounts, guardians, and telemetry
-└── dashboard/                  # Operations Web Dashboard application
-    ├── urls.py                 # Dashboard view routes (`/`, `/users`, `/alerts`, `/otp`)
-    ├── views.py                # Dashboard views, session auth & CSV export
-    ├── static/                 # Static assets, CSS, JS, branding
-    └── templates/dashboard/    # Responsive HTML templates
-        ├── base.html           # Base layout with sidebar navigation
-        ├── index.html          # Mission control & live statistics
-        ├── alerts.html         # Active SOS triage and responder dispatch
-        ├── users.html          # User directory & privilege management
-        ├── otp.html            # Real-time OTP monitoring terminal
-        └── login.html          # Command center authentication
-```
+- **Guardian Link Pairing**: Connects protected users with trusted guardians with relational roles (`Father`, `Mother`, `Brother`, `Patrol Unit`, `Friend`).
+- **Direct In-App Safety Chat**: Two-way interactive messaging between wards and guardians.
+- **Quick-Reply Presets**: One-tap situational presets (*"I have reached safely!"*, *"Call me immediately"*, *"Low battery, tracking active"*, *"Please stay on call"*).
+- **Live Battery Indicator**: Partner's live battery status is pinned in the chat app bar with color-coded warnings.
 
 ---
 
-## 🚀 Getting Started
+## ⚡ Comprehensive Features Breakdown
 
-### Prerequisites
-- **Python 3.10+** (Recommended: Python 3.11 or 3.12)
-- **pip** and **virtualenv**
-- (Optional) **Supabase Account** for cloud database & realtime sync
+### 📱 Android Application (Java & XML UI)
+- **Role-Based Dynamic Start**: Auto-routes to `GuardianHomeFragment`, `SuperAdminHomeFragment`, or `HomeFragment` based on session credentials.
+- **1-Tap Panic SOS**: Prominent pulsating emergency button with countdown cancellation.
+- **Shake Detection**: Accelerometer listener that triggers SOS on vigorous device shake.
+- **Voice SOS Keywords**: Hands-free trigger using phrases (*"Help"*, *"Guardian SOS"*, *"Save Me"*).
+- **Fake Call Simulator**: Realistic incoming call simulator with customizable caller names (*Mom 💖*, *Police Inspector*) and automated ringtones to gracefully escape hostile environments.
+- **24/7 AI Safety Assistant**: Crisis advisor offering actionable guidance on stalking, public transit safety, self-defense, and legal rights.
+- **Safe Mode Engine**: Terminates high-consumption background apps to maximize emergency battery life and broadcasts location via WhatsApp and SMS.
+- **Safety Timer & Dead-Man Switch**: Countdown timer requiring safe check-in before automatic SOS escalation.
+- **Taxi & Ride Monitoring**: Logs cab numbers and driver details with route diversion alerts.
+- **15% Critical Battery Broadcast**: Automatic emergency GPS ping before device power depletion.
+- **3 Home Screen Widgets**: 1-Tap SOS (2x2), Guardian Safety Hub (4x2), and Quick Safety Bar (4x1).
+- **Multilingual Support**: Fully localized in **English 🇬🇧**, **Telugu 🇮🇳 (తెలుగు)**, and **Hindi 🇮🇳 (हिन्दी)**.
+- **Themes**: Light, Dark, and Pure AMOLED Black mode 🖤.
 
----
-
-### 1. Clone & Setup Environment
-
-```bash
-# Clone the repository
-git clone https://github.com/satyakiran29/GuardianAI_Backend.git
-cd GuardianAI_Backend
-
-# Create and activate virtual environment
-# On Linux/macOS:
-python3 -m venv venv
-source venv/bin/activate
-
-# On Windows (PowerShell):
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-```
-
-### 2. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Configure Environment Variables
-
-Create a `.env` file in the root directory (or configure your hosting environment):
-
-```env
-# Django Settings
-DJANGO_SECRET_KEY=your-secure-secret-key
-DEBUG=True
-ALLOWED_HOSTS=*
-
-# Supabase PostgreSQL (Permanent Cloud Storage)
-# Get from: Supabase Project Settings -> Database -> Connection string (URI)
-DATABASE_URL=postgresql://postgres.jwntzspmzapxablkmqhp:[YOUR-PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:6543/postgres
-
-# Supabase REST/Realtime Integration
-<!-- SUPABASE_URL=https://jwntzspmzapxablkmqhp.supabase.co
-SUPABASE_KEY=your-supabase-service-or-anon-key -->
-
-# Optional: Set to 'true' if you want to seed initial demo accounts on build
-SEED_DEMO_DATA=false
-```
-
-### 4. Database Setup & Demo Data Seeding
-
-```bash
-# Apply database migrations
-python manage.py migrate
-
-# Seed pre-configured SuperAdmins, Responders, Users, and Sample SOS Alerts
-python manage.py seed_demo_data
-```
-
-### 5. Run Local Development Server
-
-```bash
-python manage.py runserver
-```
-
-Once started, access:
-- **Operations Dashboard**: [http://127.0.0.1:8000/](http://127.0.0.1:8000/)
-- **REST API Endpoints**: [http://127.0.0.1:8000/api/](http://127.0.0.1:8000/api/)
-- **Django Admin**: [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
+### 🖥️ Django Web Command Dashboard
+- **Interactive Leaflet.js Radar**: Live map tracking with pulsing red SOS rings and green guardian units.
+- **Guardian Hub & Telemetry Desk (`/guardian-hub/`)**: Live web tracking console with real-time battery bars and embedded chat.
+- **User Directory & Privilege Elevation**: Filter, search, and manage roles with assigned guardian links.
+- **Live OTP Simulator & Ledger**: Visual inspection of 6-digit OTP transactions and expiry status.
 
 ---
 
-## 🔑 Default Demo Credentials
+## 🔌 REST API Reference
 
-You can log into the web dashboard or authenticate via API using these pre-seeded accounts:
+### 🔐 Authentication & Accounts
+| Endpoint | Method | Role Required | Description | Sample Payload |
+| :--- | :---: | :---: | :--- | :--- |
+| `/api/auth/send-otp/` | `POST` | Any | Dispatch 6-digit verification OTP | `{"target": "+919876543210", "purpose": "login"}` |
+| `/api/auth/verify-otp/` | `POST` | Any | Validate 6-digit passcode | `{"target": "+919876543210", "otp_code": "123456"}` |
+| `/api/auth/register/` | `POST` | Any | Register account with role | `{"name": "Priya", "phone": "+919876543210", "role": "user"}` |
+| `/api/auth/login/` | `POST` | Any | Sign in via password or phone OTP | `{"identifier": "+919876543210", "password": "pass"}` |
 
-| Role | Email / Phone | Password | Master OTP |
-| :--- | :--- | :--- | :--- |
-| **Super Admin** | `satya@guardianai.app` / `+919999000001` | `admin123` | `123456` |
-| **Super Admin** | `superadmin@guardianai.app` / `+919999000099` | `admin123` | `123456` |
-| **Guardian / Responder** | `mom@guardianai.app` / `+15552345678` | `guardian123` | `123456` |
-| **Protected User** | `ananya@guardianai.app` / `+919876543210` | `guardian123` | `123456` |
+### 🛡️ Guardian Management & Wards Radar
+| Endpoint | Method | Role Required | Description | Sample Parameters / Payload |
+| :--- | :---: | :---: | :--- | :--- |
+| `/api/guardians/tracked-wards/` | `GET` | `guardian`, `superadmin` | Fetch live wards telemetry (Battery %, GPS, SOS). **Denied to `user` (403)** | `?guardian_phone=+919988776655` |
+| `/api/guardians/my-guardians/` | `GET` | `user`, `superadmin` | Fetch user's assigned guardians | `?phone=+919876543210` |
+| `/api/guardians/link/` | `POST` | `user`, `guardian`, `superadmin` | Create active guardian-ward link | `{"user_phone": "+91...", "guardian_phone": "+91...", "relationship": "Father"}` |
+| `/api/guardians/link/` | `DELETE` | Any linked party | Revoke guardian link | `{"link_id": 1}` |
 
----
-
-## 📡 REST API Reference
-
-All API routes are prefixed with `/api/`.
-
-### 🔐 Authentication & Verification
-| Method | Endpoint | Description | Sample Body |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/send-otp/` | Dispatch a 6-digit OTP to phone/email | `{"target": "+919876543210", "purpose": "login"}` |
-| `POST` | `/api/auth/verify-otp/` | Verify OTP code (or bypass with `123456`) | `{"target": "+919876543210", "otp_code": "123456"}` |
-| `POST` | `/api/auth/register/` | Register or update user profile | `{"name": "Ananya", "phone": "+919876543210", "role": "user"}` |
-| `POST` | `/api/auth/login/` | Authenticate via Password or OTP | `{"identifier": "+919876543210", "password": "guardian123"}` |
+### 💬 Safety Chat
+| Endpoint | Method | Role Required | Description | Sample Payload |
+| :--- | :---: | :---: | :--- | :--- |
+| `/api/chat/send/` | `POST` | Linked party | Send safety message | `{"sender_phone": "+91...", "receiver_phone": "+91...", "message": "I'm safe!"}` |
+| `/api/chat/history/` | `GET` | Linked party | Retrieve chat conversation | `?user1=+91...&user2=+91...` |
 
 ### 🚨 Emergency SOS & Telemetry
-| Method | Endpoint | Description | Sample Body |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/sos/trigger/` | Broadcast emergency SOS incident | `{"phone": "+919876543210", "latitude": 17.3850, "longitude": 78.4867, "trigger_source": "button", "siren_active": true}` |
-| `POST` | `/api/sos/resolve/` | Resolve active SOS incident | `{"alert_id": 1, "notes": "Safe at home", "responder_id": 1}` |
-| `POST` | `/api/location/ping/` | Ingest live telemetry & battery level | `{"phone": "+919876543210", "latitude": 17.4435, "longitude": 78.3772, "battery_level": 82}` |
-
-### 👥 Users, Contacts & Helplines
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/users/` | Retrieve all registered users (supports `?role=guardian` filter) |
-| `GET` | `/api/contacts/` | Retrieve emergency contacts (`?user_id=1` or `?phone=+91...`) |
-| `POST` | `/api/contacts/` | Add emergency contact for a user |
-| `GET` | `/api/helplines/` | Get list of emergency helpline numbers (112, 1091, 100, 108, etc.) |
-| `GET` | `/api/dashboard/stats/`| Aggregated platform statistics & recent alerts |
+| Endpoint | Method | Role Required | Description | Sample Payload |
+| :--- | :---: | :---: | :--- | :--- |
+| `/api/sos/trigger/` | `POST` | Any | Broadcast emergency SOS distress | `{"phone": "+91...", "latitude": 17.448, "longitude": 78.391, "trigger_source": "button"}` |
+| `/api/sos/resolve/` | `POST` | `guardian`, `superadmin` | Resolve active emergency incident | `{"alert_id": 1, "notes": "Citizen safe"}` |
+| `/api/location/ping/` | `POST` | Any | Update live GPS & battery telemetry | `{"phone": "+91...", "latitude": 17.45, "longitude": 78.39, "battery_level": 78}` |
+| `/api/dashboard/stats/` | `GET` | `superadmin` | System-wide KPI summary metrics | *None* |
 
 ---
 
-## ⚡ Supabase Setup (Optional Cloud Sync)
+## 🚀 Installation & Setup Guide
 
-To enable live cloud sync and Realtime WebSocket subscriptions:
+### 1. Backend & Web Dashboard Setup (Django + Supabase)
+```bash
+# Navigate to the backend directory
+cd Backend
 
-1. Create a project on [Supabase](https://supabase.com/).
-2. Open the **SQL Editor** in the Supabase Dashboard.
-3. Paste and execute the contents of [`supabase_schema.sql`](file:///h:/Github/GuardianAI_Backend/supabase_schema.sql).
-4. Copy your project **URL** and **anon/service key** to your `.env` file (`SUPABASE_URL` and `SUPABASE_KEY`).
+# Configure environment secrets
+cp .env.example .env
 
----
+# Run database migrations
+python manage.py makemigrations guardian_api
+python manage.py migrate
 
-## 🚢 Deployment
+# Seed multi-role demonstration accounts
+python manage.py seed_demo_data
 
-### Production Deployment (Heroku / Render / Railway)
+# Start local server on port 8000
+python manage.py runserver 127.0.0.1:8000
+```
+Open **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)** to access the live operations command center.
 
-This repository includes pre-configured deployment files:
-- **`Procfile`**: Runs Gunicorn WSGI server: `web: gunicorn guardian_backend.wsgi:application --log-file -`
-- **`build.sh`**: Runs dependency installation, asset collection (`collectstatic`), migrations, and seed data.
-- **`runtime.txt`**: Specifies Python runtime `python-3.11.8`.
-
-#### Example Deployment on Render / Railway:
-1. Connect your GitHub repository.
-2. Set Build Command: `./build.sh` or `pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate`
-3. Set Start Command: `gunicorn guardian_backend.wsgi:application`
-4. Set Environment Variables: `DJANGO_SECRET_KEY`, `DEBUG=False`, `ALLOWED_HOSTS=.onrender.com,yourdomain.com`.
-
----
-
-## 🛡️ Security & Privacy Notice
-- This platform handles sensitive location and emergency telemetry. Ensure `DEBUG=False` and set restrictive `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS` before production deployment.
-- Passwords should be hashed in production using standard Django authentication backends.
-- Set appropriate Row Level Security (RLS) policies in Supabase for user data protection.
+### 2. Android Mobile App Setup
+- Open the [App](file:///c:/Users/psaty/Videos/GuardianAI/App) directory in **Android Studio** (Giraffe or newer).
+- Ensure JDK 17+ or JDK 21 is configured.
+- Compile and assemble the debug build via Gradle:
+```powershell
+.\gradlew.bat assembleDebug
+```
+- The fresh build is output to `app/build/outputs/apk/debug/app-debug.apk` and mirrored to `Apk/GuardianAI-debug.apk`.
 
 ---
 
-## 🤝 Contributing
-Contributions, issues, and feature requests are welcome!
-Feel free to open a pull request or submit an issue to help make communities safer.
+## 🧪 Automated Verification Test Suite
+
+GuardianAI includes a comprehensive end-to-end Python test suite verifying multi-role data isolation, OTP flows, live telemetry pings, and chat systems:
+
+```bash
+# In Backend/ directory
+python test_guardian_system.py
+```
+
+### Verified Test Assertions:
+```text
+✅ Created/Loaded Protected User: Priya Sharma (Battery: 78%)
+✅ Created/Loaded Guardian: Rajesh Sharma (Battery: 95%)
+✅ Guardian Link API: Guardian linked successfully to Protected User
+✅ Guardian Wards Radar API: Live telemetry verified
+✅ User & Guardian Two-Way Chat API: Message sent & history retrieved
+✅ Real-time Telemetry Ping: Updated user to 72% battery at Inorbit Mall Road
+✅ User 'My Guardians' Access Verified: Protected user accesses their guardians
+✅ User Guardian Portal Removal Verified: 403 Forbidden correctly returned for regular users
+✅ Strict Guardian Isolation Verified: skdad ONLY sees their assigned ward (SK User)
+✅ Strict Guardian Isolation Verified: other_guardian ONLY sees Other User
+✅ User Access Block Verified: sk (user) gets 403 Forbidden on Guardian Portal
+✅ SuperAdmin Omniscient Access Verified: SuperAdmin accessed all users data across the system
+🎉 ALL GUARDIAN SYSTEM VERIFICATION TESTS PASSED SUCCESSFULLY!
+```
 
 ---
 
-## 📄 License
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+## 👥 Engineering Team & Credits
+
+- 👤 **[Pampana Satya Kiran](http://psatyakiran.in/)** — *Lead Developer & System Architect*
+- 👤 **Amarthaluri Harshavardhan** — *Core Android & Security Engineer*
+- 👤 **Madeli Narasimha** — *Backend & Cloud Integration*
+- 👤 **Mammula Sneha** — *UI/UX & Safety Systems*
+- 👤 **Kadagala Meghana** — *QA & Location Telemetry*
+
+### 🤝 Credits & Resources
+- Website: [psatyakiran.in](http://psatyakiran.in/)
+- Icons: [icons8.com](https://icons8.com) & Material Design Symbols
+- Maps: [Leaflet.js](https://leafletjs.com/) & OpenStreetMap
