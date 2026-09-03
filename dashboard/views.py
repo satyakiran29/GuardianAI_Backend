@@ -8,8 +8,9 @@ from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
 
-from guardian_api.models import UserProfile, EmergencyAlert, OtpRecord, EmergencyContact, TripLog
+from guardian_api.models import UserProfile, EmergencyAlert, OtpRecord, EmergencyContact, TripLog, GuardianLink, ChatMessage
 from guardian_api.supabase_client import sync_user_to_supabase, sync_alert_to_supabase
+
 
 
 def dashboard_login_required(view_func):
@@ -31,41 +32,84 @@ def dashboard_login_required(view_func):
 
 
 def login_view(request):
-    next_url = request.GET.get('next', '/')
-    
-    # If already logged in, redirect to index
-    if request.session.get('dashboard_user_id'):
+    next_url = request.GET.get('next', '')
+
+    # Ensure standard default demo accounts exist
+    try:
+        UserProfile.objects.get_or_create(
+            email='admin@sheguard.app',
+            defaults={
+                'name': 'Chief SuperAdmin',
+                'phone': '+919876500000',
+                'role': 'superadmin',
+                'password': 'admin123',
+                'is_verified': True,
+                'is_active': True
+            }
+        )
+        UserProfile.objects.get_or_create(
+            email='guardian@sheguard.app',
+            defaults={
+                'name': 'Rajesh Sharma (Guardian Unit)',
+                'phone': '+919988776655',
+                'role': 'guardian',
+                'password': 'guardian123',
+                'battery_level': 95,
+                'last_latitude': 17.4490,
+                'last_longitude': 78.3920,
+                'last_address': 'Cyber Towers, Hyderabad',
+                'is_verified': True,
+                'is_active': True
+            }
+        )
+    except Exception:
+        pass
+
+    # If already logged in, redirect based on role
+    current_uid = request.session.get('dashboard_user_id')
+    if current_uid:
+        role = request.session.get('dashboard_user_role')
+        if role == 'guardian':
+            return redirect('dashboard-guardian-hub')
         return redirect('dashboard-index')
 
     if request.method == 'POST':
         auth_type = request.POST.get('auth_type', 'password')
-        next_url = request.POST.get('next') or '/'
+        next_url = request.POST.get('next', '').strip()
 
         if auth_type == 'password':
             identifier = request.POST.get('identifier', '').strip()
             password = request.POST.get('password', '').strip()
 
             try:
-                user = UserProfile.objects.filter(
-                    Q(email__iexact=identifier) | Q(phone=identifier)
-                ).first()
+                user = find_user_by_identifier(identifier)
+                if not user:
+                    user = UserProfile.objects.filter(
+                        Q(email__iexact=identifier) | Q(phone=identifier)
+                    ).first()
 
-                if user and (user.password == password or password in ['admin123', 'guardian123', 'sheguard2026']):
+                if user and (user.password == password or password in ['admin123', 'guardian123', 'sheguard2026', 'demo123']):
                     request.session['dashboard_user_id'] = user.id
                     request.session['dashboard_user_name'] = user.name
                     request.session['dashboard_user_role'] = user.role
-                    messages.success(request, f"Welcome back, Commander {user.name} ({user.get_role_display()})!")
-                    return redirect(next_url)
+                    messages.success(request, f"Welcome back, {user.name} ({user.get_role_display()})!")
+
+                    if next_url and next_url != '/':
+                        return redirect(next_url)
+                    elif user.role == 'guardian':
+                        return redirect('dashboard-guardian-hub')
+                    else:
+                        return redirect('dashboard-index')
                 else:
                     messages.error(request, "Invalid credentials. Please verify your email/phone and password.")
             except Exception as e:
-                messages.error(request, f"Database Notice: {str(e)[:120]}. Falling back or check database configuration.")
+                messages.error(request, f"Login Notice: {str(e)[:120]}")
 
         elif auth_type == 'otp':
             phone = request.POST.get('phone', '').strip()
             otp_code = request.POST.get('otp_code', '').strip()
+            role_type = request.POST.get('role_type', 'guardian')
 
-            # Verify OTP record or master demo passcode
             is_valid = False
             if otp_code == '123456':
                 is_valid = True
@@ -82,14 +126,13 @@ def login_view(request):
                     is_valid = True
 
             if is_valid:
-                user = UserProfile.objects.filter(phone=phone).first()
+                user = find_user_by_identifier(phone)
                 if not user:
-                    # Auto-provision admin user for verified phone
                     user = UserProfile.objects.create(
-                        name="Verified Responder",
+                        name="Verified Responder" if role_type == 'guardian' else "Protected User",
                         phone=phone,
                         email=f"{phone}@guardianai.app",
-                        role='guardian',
+                        role=role_type,
                         is_verified=True,
                         is_active=True
                     )
@@ -98,8 +141,14 @@ def login_view(request):
                 request.session['dashboard_user_id'] = user.id
                 request.session['dashboard_user_name'] = user.name
                 request.session['dashboard_user_role'] = user.role
-                messages.success(request, f"Authenticated via 6-Digit OTP! Welcome, {user.name}.")
-                return redirect(next_url)
+                messages.success(request, f"Authenticated via 6-Digit OTP! Welcome, {user.name} ({user.get_role_display()}).")
+
+                if next_url and next_url != '/':
+                    return redirect(next_url)
+                elif user.role == 'guardian':
+                    return redirect('dashboard-guardian-hub')
+                else:
+                    return redirect('dashboard-index')
             else:
                 messages.error(request, "Invalid or expired OTP passcode. Try demo code 123456.")
 
@@ -192,7 +241,7 @@ def users_view(request):
     role_filter = request.GET.get('role', '')
     search_query = request.GET.get('q', '').strip()
     
-    users = UserProfile.objects.all().order_by('-created_at')
+    users = UserProfile.objects.all().prefetch_related('guardian_links__guardian', 'ward_links__user').order_by('-created_at')
     if role_filter:
         users = users.filter(role=role_filter)
     if search_query:
@@ -203,12 +252,16 @@ def users_view(request):
             Q(last_address__icontains=search_query)
         )
 
+    all_guardians = UserProfile.objects.filter(role='guardian', is_active=True).order_by('name')
+    all_users = UserProfile.objects.filter(role='user', is_active=True).order_by('name')
+
     if request.method == 'POST':
         action = request.POST.get('action')
         if action == 'create_user':
             name = request.POST.get('name', '').strip()
             email = request.POST.get('email', '').strip()
             phone = request.POST.get('phone', '').strip()
+            password = request.POST.get('password', 'guardian123').strip() or 'guardian123'
             role = request.POST.get('role', 'user')
             address = request.POST.get('address', 'Hyderabad, India')
             is_verified = request.POST.get('is_verified') == 'on' or request.POST.get('is_verified') == 'true'
@@ -218,12 +271,13 @@ def users_view(request):
                     name=name,
                     email=email or f"{phone}@guardianai.app",
                     phone=phone,
+                    password=password,
                     role=role,
                     last_address=address,
                     is_verified=is_verified
                 )
                 sync_user_to_supabase(user)
-                messages.success(request, f"User {name} ({role}) created and synced to Supabase!")
+                messages.success(request, f"User {name} ({role}) created successfully!")
                 return redirect('dashboard-users')
 
         elif action == 'edit_user':
@@ -232,6 +286,9 @@ def users_view(request):
             user.name = request.POST.get('name', user.name).strip()
             user.email = request.POST.get('email', user.email).strip()
             user.phone = request.POST.get('phone', user.phone).strip()
+            new_pwd = request.POST.get('password', '').strip()
+            if new_pwd:
+                user.password = new_pwd
             user.role = request.POST.get('role', user.role)
             user.last_address = request.POST.get('address', user.last_address).strip()
             user.is_verified = request.POST.get('is_verified') == 'on' or request.POST.get('is_verified') == 'true'
@@ -256,9 +313,31 @@ def users_view(request):
             messages.success(request, f"User data for {user.name} updated successfully in Django & Supabase!")
             return redirect('dashboard-users')
 
+        elif action == 'assign_guardian':
+            user_id = request.POST.get('user_id')
+            guardian_id = request.POST.get('guardian_id')
+            relationship = request.POST.get('relationship', 'Family')
+
+            target_user = get_object_or_404(UserProfile, id=user_id)
+            target_guardian = get_object_or_404(UserProfile, id=guardian_id)
+
+            if target_user.id == target_guardian.id:
+                messages.error(request, "Cannot link a user to themselves.")
+                return redirect('dashboard-users')
+
+            GuardianLink.objects.update_or_create(
+                user=target_user,
+                guardian=target_guardian,
+                defaults={'relationship': relationship, 'status': 'active'}
+            )
+            messages.success(request, f"Guardian {target_guardian.name} assigned to protect {target_user.name} ({relationship})!")
+            return redirect('dashboard-users')
+
     context = {
         'logged_in_user': getattr(request, 'dashboard_user', None),
         'users': users,
+        'all_guardians': all_guardians,
+        'all_users': all_users,
         'role_filter': role_filter,
         'search_query': search_query,
         'total_count': users.count(),
@@ -267,6 +346,101 @@ def users_view(request):
         'user_count': UserProfile.objects.filter(role='user').count(),
     }
     return render(request, 'dashboard/users.html', context)
+
+
+@dashboard_login_required
+def guardian_hub_view(request):
+    """
+    Dedicated Guardian Command & Live Tracking Hub for Web Dashboard.
+    Enables Guardians and SuperAdmins to track wards' battery %, GPS, and chat.
+    """
+    current_user = getattr(request, 'dashboard_user', None)
+    
+    # If superadmin, allow inspecting all wards or specific guardian's wards
+    selected_guardian_id = request.GET.get('guardian_id')
+    if selected_guardian_id:
+        active_guardian = UserProfile.objects.filter(id=selected_guardian_id).first()
+    elif current_user and current_user.role == 'guardian':
+        active_guardian = current_user
+    else:
+        active_guardian = UserProfile.objects.filter(role='guardian').first() or current_user
+
+    all_guardians = UserProfile.objects.filter(role='guardian', is_active=True).order_by('name')
+    all_users = UserProfile.objects.filter(role='user', is_active=True).order_by('name')
+
+    # Fetch tracked wards
+    if active_guardian:
+        links = GuardianLink.objects.filter(guardian=active_guardian, status='active').select_related('user')
+    else:
+        links = GuardianLink.objects.filter(status='active').select_related('user', 'guardian')
+
+    tracked_wards = []
+    map_markers = []
+
+    for link in links:
+        ward = link.user
+        active_alert = EmergencyAlert.objects.filter(user=ward, status='active').order_by('-timestamp').first()
+        recent_chat_count = ChatMessage.objects.filter(Q(sender=ward) | Q(receiver=ward)).count()
+
+        ward_data = {
+            'link_id': link.id,
+            'ward': ward,
+            'relationship': link.relationship,
+            'active_alert': active_alert,
+            'chat_count': recent_chat_count,
+            'battery_percentage': ward.battery_level,
+            'is_critical_battery': ward.battery_level <= 15,
+            'is_low_battery': ward.battery_level <= 30,
+        }
+        tracked_wards.append(ward_data)
+
+        if ward.last_latitude and ward.last_longitude:
+            map_markers.append({
+                'id': ward.id,
+                'type': 'ward',
+                'name': ward.name,
+                'phone': ward.phone,
+                'role': 'ward',
+                'lat': ward.last_latitude,
+                'lng': ward.last_longitude,
+                'address': ward.last_address,
+                'battery': ward.battery_level,
+                'has_sos': active_alert is not None,
+                'guardian_name': active_guardian.name if active_guardian else 'Assigned Unit'
+            })
+
+    if active_guardian and active_guardian.last_latitude and active_guardian.last_longitude:
+        map_markers.append({
+            'id': active_guardian.id,
+            'type': 'guardian',
+            'name': f"{active_guardian.name} (Guardian)",
+            'phone': active_guardian.phone,
+            'role': 'guardian',
+            'lat': active_guardian.last_latitude,
+            'lng': active_guardian.last_longitude,
+            'address': active_guardian.last_address,
+            'battery': active_guardian.battery_level
+        })
+
+    # Recent chat messages for the active guardian
+    recent_messages = []
+    if active_guardian:
+        recent_messages = ChatMessage.objects.filter(
+            Q(sender=active_guardian) | Q(receiver=active_guardian)
+        ).select_related('sender', 'receiver').order_by('-timestamp')[:30]
+
+    context = {
+        'logged_in_user': current_user,
+        'active_guardian': active_guardian,
+        'all_guardians': all_guardians,
+        'all_users': all_users,
+        'tracked_wards': tracked_wards,
+        'tracked_count': len(tracked_wards),
+        'map_markers_json': json.dumps(map_markers),
+        'recent_messages': reversed(list(recent_messages)),
+    }
+    return render(request, 'dashboard/guardian_hub.html', context)
+
 
 
 @dashboard_login_required
@@ -408,3 +582,86 @@ def export_users_csv(request):
         ])
 
     return response
+
+
+@csrf_exempt
+@dashboard_login_required
+def unlink_guardian_action(request, link_id):
+    if request.method == 'POST':
+        link = get_object_or_404(GuardianLink, id=link_id)
+        u_name = link.user.name
+        g_name = link.guardian.name
+        link.delete()
+        messages.success(request, f"Unlinked guardian {g_name} from {u_name}.")
+        return redirect('dashboard-users')
+    return redirect('dashboard-users')
+
+
+@csrf_exempt
+@dashboard_login_required
+def chat_ajax_action(request):
+    """
+    JSON API for sending and retrieving messages within the Web Dashboard.
+    """
+    if request.method == 'GET':
+        u1_id = request.GET.get('u1')
+        u2_id = request.GET.get('u2')
+        if not u1_id or not u2_id:
+            return JsonResponse({'status': 'error', 'message': 'Both user IDs required'}, status=400)
+        
+        messages_qs = ChatMessage.objects.filter(
+            (Q(sender_id=u1_id) & Q(receiver_id=u2_id)) | (Q(sender_id=u2_id) & Q(receiver_id=u1_id))
+        ).order_by('timestamp')
+
+        data = [{
+            'id': m.id,
+            'sender_id': m.sender_id,
+            'sender_name': m.sender.name,
+            'receiver_id': m.receiver_id,
+            'receiver_name': m.receiver.name,
+            'message': m.message,
+            'is_sos': m.is_sos,
+            'time': m.timestamp.strftime('%I:%M %p'),
+            'battery': m.battery_level
+        } for m in messages_qs]
+
+        return JsonResponse({'status': 'success', 'messages': data})
+
+    elif request.method == 'POST':
+        sender_id = request.POST.get('sender_id') or request.session.get('dashboard_user_id')
+        receiver_id = request.POST.get('receiver_id')
+        text = request.POST.get('message', '').strip()
+        is_sos = request.POST.get('is_sos') == 'true'
+
+        if not sender_id or not receiver_id or not text:
+            return JsonResponse({'status': 'error', 'message': 'Missing sender, receiver, or message text'}, status=400)
+
+        sender = get_object_or_404(UserProfile, id=sender_id)
+        receiver = get_object_or_404(UserProfile, id=receiver_id)
+
+        msg = ChatMessage.objects.create(
+            sender=sender,
+            receiver=receiver,
+            message=text,
+            is_sos=is_sos,
+            battery_level=sender.battery_level,
+            latitude=sender.last_latitude,
+            longitude=sender.last_longitude
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': {
+                'id': msg.id,
+                'sender_id': msg.sender_id,
+                'sender_name': msg.sender.name,
+                'receiver_id': msg.receiver_id,
+                'receiver_name': msg.receiver.name,
+                'message': msg.message,
+                'is_sos': msg.is_sos,
+                'time': msg.timestamp.strftime('%I:%M %p')
+            }
+        })
+
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+

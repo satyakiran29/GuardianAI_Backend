@@ -40,6 +40,12 @@
             {% endif %}
           </a>
         </li>
+        <li class="nav-item {% if request.resolver_match.url_name == 'dashboard-guardian-hub' %}active{% endif %}">
+          <a href="{% url 'dashboard-guardian-hub' %}">
+            <span>🛡️</span>
+            <span>Guardian Hub &amp; Chat</span>
+          </a>
+        </li>
         <li class="nav-item {% if request.resolver_match.url_name == 'dashboard-users' %}active{% endif %}">
           <a href="{% url 'dashboard-users' %}">
             <span>👥</span>

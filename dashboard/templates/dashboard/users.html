@@ -1,20 +1,20 @@
 {% extends 'dashboard/base.html' %}
 
-{% block title %}GuardianAI — User &amp; Role Data Management{% endblock %}
+{% block title %}GuardianAI — SuperAdmin User &amp; Guardian Data Management{% endblock %}
 
 {% block content %}
 <div class="top-header">
   <div class="header-title">
-    <h2>User &amp; Role Data Management</h2>
-    <p>Complete control to create, inspect, edit telemetry, change roles, and sync user records with Supabase</p>
+    <h2>👑 SuperAdmin User &amp; Guardian Data Management</h2>
+    <p>Complete control to create, inspect, edit telemetry, manage guardians &amp; wards, update credentials, and sync user records.</p>
   </div>
 
-  <div style="display: flex; gap: 10px;">
+  <div style="display: flex; gap: 10px; flex-wrap: wrap;">
     <a href="{% url 'dashboard-export-users-csv' %}" class="btn btn-outline">
       📥 Export CSV
     </a>
     <button class="btn btn-primary" onclick="openModal('modal-add-user')">
-      <span>+</span> Add New User
+      <span>+</span> Add New User / Guardian
     </button>
   </div>
 </div>
@@ -49,19 +49,19 @@
   </div>
 </div>
 
-<!-- Users Table -->
+<!-- Users Table with Linked Guardians & Telemetry -->
 <div class="glass-panel">
   <div class="table-container">
     <table class="cyber-table">
       <thead>
         <tr>
           <th>User Profile</th>
-          <th>Phone / Contact</th>
+          <th>Phone / Email</th>
           <th>Role</th>
           <th>Status &amp; Verification</th>
-          <th>Emergency Contacts</th>
-          <th>Telemetry &amp; Location</th>
-          <th>Actions</th>
+          <th>Linked Guardians / Wards</th>
+          <th>Live Telemetry &amp; Battery</th>
+          <th>SuperAdmin Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -74,12 +74,13 @@
                 </div>
                 <div>
                   <div style="font-weight: 700; color: #fff; font-size: 0.95rem;">{{ user.name }}</div>
-                  <div style="font-size: 0.78rem; color: var(--text-muted);">{{ user.email }}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">ID: #{{ user.id }}</div>
                 </div>
               </div>
             </td>
             <td>
               <code>{{ user.phone }}</code>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">{{ user.email }}</div>
             </td>
             <td>
               <form method="POST" action="{% url 'dashboard-update-role' user.id %}" style="display: inline-flex; align-items: center; gap: 6px;">
@@ -106,24 +107,57 @@
               </div>
             </td>
             <td>
-              <span style="font-weight: 700; color: #c084fc;">{{ user.contacts.count }}</span> Linked Contacts
+              {% if user.role == 'user' %}
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  {% for link in user.guardian_links.all %}
+                    <div style="display: inline-flex; align-items: center; justify-content: space-between; gap: 6px; background: rgba(30, 41, 59, 0.6); padding: 2px 8px; border-radius: 6px; font-size: 0.75rem;">
+                      <span style="color: #34d399;">🛡️ {{ link.guardian.name }} ({{ link.relationship }})</span>
+                      <form method="POST" action="{% url 'dashboard-unlink-guardian' link.id %}" style="display: inline;" onsubmit="return confirm('Remove guardian {{ link.guardian.name }}?');">
+                        {% csrf_token %}
+                        <button type="submit" style="background: none; border: none; color: #f87171; cursor: pointer; font-size: 0.75rem;">✕</button>
+                      </form>
+                    </div>
+                  {% empty %}
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">No guardians assigned</span>
+                  {% endfor %}
+                  <button type="button" class="btn btn-outline btn-sm" style="font-size: 0.7rem; padding: 2px 6px; margin-top: 4px; width: fit-content;" onclick="openAssignGuardianModal('{{ user.id }}', '{{ user.name|escapejs }}')">
+                    + Assign Guardian
+                  </button>
+                </div>
+              {% elif user.role == 'guardian' %}
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <span style="font-size: 0.78rem; font-weight: 600; color: #c084fc;">
+                    Protecting {{ user.ward_links.count }} Ward(s)
+                  </span>
+                  {% for link in user.ward_links.all %}
+                    <div style="font-size: 0.72rem; color: #94a3b8;">
+                      🌸 {{ link.user.name }} ({{ link.relationship }})
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span style="font-size: 0.75rem; color: #fbbf24;">Master Administrator</span>
+              {% endif %}
             </td>
             <td>
-              <div style="font-size: 0.8rem; color: var(--text-secondary);">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 0.78rem; background: {% if user.battery_level <= 15 %}rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444;{% elif user.battery_level <= 30 %}rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b;{% else %}rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981;{% endif %}">
+                  🔋 {{ user.battery_level }}%
+                </span>
+                <span style="font-size: 0.72rem; color: var(--text-muted);">{{ user.contacts.count }} contacts</span>
+              </div>
+              <div style="font-size: 0.78rem; color: var(--text-secondary);">
                 {% if user.last_latitude and user.last_longitude %}
                   <a href="https://www.google.com/maps/search/?api=1&query={{ user.last_latitude }},{{ user.last_longitude }}" target="_blank" style="color: #60a5fa; text-decoration: none; font-weight: 500;" title="Open in Google Maps">
-                    📍 {{ user.last_address|default:"View on Map" }} ↗
+                    📍 {{ user.last_address|default:"View on Map"|truncatechars:28 }} ↗
                   </a>
                 {% else %}
-                  📍 {{ user.last_address|default:"Not Available" }}
+                  📍 {{ user.last_address|default:"Not Available"|truncatechars:28 }}
                 {% endif %}
-              </div>
-              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
-                🔋 <strong>{{ user.battery_level }}%</strong> • Lat: {{ user.last_latitude|default:"N/A" }}, Lng: {{ user.last_longitude|default:"N/A" }}
               </div>
             </td>
             <td>
-              <div style="display: flex; gap: 6px;">
+              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                 <button type="button" class="btn btn-outline btn-sm" onclick='openEditUserModal({
                   id: "{{ user.id }}",
                   name: "{{ user.name|escapejs }}",
@@ -139,10 +173,10 @@
                 })'>
                   ✏️ Edit
                 </button>
-                <form method="POST" action="{% url 'dashboard-delete-user' user.id %}" onsubmit="return confirm('Are you sure you want to permanently remove {{ user.name|escapejs }} from Django &amp; Supabase?');" style="display: inline;">
+                <form method="POST" action="{% url 'dashboard-delete-user' user.id %}" onsubmit="return confirm('Permanently remove user {{ user.name|escapejs }} from system?');" style="display: inline;">
                   {% csrf_token %}
                   <button type="submit" class="btn btn-outline btn-sm" style="color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
-                    🗑️ Delete
+                    🗑️
                   </button>
                 </form>
               </div>
@@ -188,6 +222,11 @@
       </div>
 
       <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" placeholder="Default: guardian123" class="form-control">
+      </div>
+
+      <div class="form-group">
         <label class="form-label">Assign Role *</label>
         <select name="role" class="form-control">
           <option value="user">🌸 Protected User (Citizen with SOS &amp; AI Safety)</option>
@@ -214,11 +253,58 @@
   </div>
 </div>
 
+<!-- Modal: Assign Guardian to User -->
+<div id="modal-assign-guardian" class="modal-overlay">
+  <div class="modal-card" style="max-width: 480px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h3 style="font-family: var(--font-heading); color: #fff;">🛡️ Assign Guardian to User</h3>
+      <button onclick="closeModal('modal-assign-guardian')" style="background: transparent; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer;">&times;</button>
+    </div>
+
+    <form method="POST">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="assign_guardian">
+      <input type="hidden" name="user_id" id="assign_user_id">
+
+      <div class="form-group">
+        <label class="form-label">Protected User:</label>
+        <div id="assign_user_name_display" style="font-weight: 700; color: #c084fc; font-size: 1rem; margin-bottom: 12px;"></div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Select Guardian / Escort *</label>
+        <select name="guardian_id" class="form-control" required>
+          <option value="">-- Choose Guardian --</option>
+          {% for g in all_guardians %}
+            <option value="{{ g.id }}">🛡️ {{ g.name }} ({{ g.phone }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Relationship / Classification</label>
+        <select name="relationship" class="form-control">
+          <option value="Family">Family / Parent</option>
+          <option value="Spouse">Spouse / Partner</option>
+          <option value="Friend">Friend / Roommate</option>
+          <option value="Security Officer">SHE Team / Security Officer</option>
+          <option value="Verified Escort">Verified Escort</option>
+        </select>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" onclick="closeModal('modal-assign-guardian')" class="btn btn-outline">Cancel</button>
+        <button type="submit" class="btn btn-primary">Link Guardian</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Modal: Edit Existing User Data -->
 <div id="modal-edit-user" class="modal-overlay">
   <div class="modal-card" style="max-width: 600px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <h3 style="font-family: var(--font-heading); color: #fff;">✏️ Edit User &amp; Telemetry Data</h3>
+      <h3 style="font-family: var(--font-heading); color: #fff;">✏️ Edit User Credentials &amp; Telemetry</h3>
       <button onclick="closeModal('modal-edit-user')" style="background: transparent; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer;">&times;</button>
     </div>
 
@@ -246,13 +332,18 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">Role *</label>
-          <select name="role" id="edit_role" class="form-control">
-            <option value="user">🌸 Protected User</option>
-            <option value="guardian">🛡️ Guardian Responder</option>
-            <option value="superadmin">👑 SuperAdmin Master</option>
-          </select>
+          <label class="form-label">Update Password (Optional)</label>
+          <input type="password" name="password" placeholder="Leave empty to keep current" class="form-control">
         </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Role *</label>
+        <select name="role" id="edit_role" class="form-control">
+          <option value="user">🌸 Protected User</option>
+          <option value="guardian">🛡️ Guardian Responder</option>
+          <option value="superadmin">👑 SuperAdmin Master</option>
+        </select>
       </div>
 
       <div class="form-group">
@@ -298,6 +389,12 @@
 </div>
 
 <script>
+function openAssignGuardianModal(userId, userName) {
+  document.getElementById('assign_user_id').value = userId;
+  document.getElementById('assign_user_name_display').innerText = userName;
+  openModal('modal-assign-guardian');
+}
+
 function openEditUserModal(user) {
   document.getElementById('edit_user_id').value = user.id;
   document.getElementById('edit_name').value = user.name;

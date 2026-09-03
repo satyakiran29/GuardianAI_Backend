@@ -105,3 +105,35 @@ class TripLog(models.Model):
 
     def __str__(self):
         return f"Trip {self.vehicle_number} - {self.user.name}"
+
+
+class GuardianLink(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='guardian_links')
+    guardian = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='ward_links')
+    relationship = models.CharField(max_length=50, default='Family')
+    status = models.CharField(max_length=20, default='active') # active, pending, revoked
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'guardian')
+
+    def __str__(self):
+        return f"{self.guardian.name} (Guardian) -> {self.user.name} (Protected User) [{self.relationship}]"
+
+
+class ChatMessage(models.Model):
+    sender = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='sent_messages')
+    receiver = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='received_messages')
+    message = models.TextField()
+    is_sos = models.BooleanField(default=False)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    battery_level = models.IntegerField(null=True, blank=True)
+    is_read = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']
+
+    def __str__(self):
+        return f"[{self.timestamp.strftime('%H:%M')}] {self.sender.name} -> {self.receiver.name}: {self.message[:30]}"

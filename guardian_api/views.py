@@ -6,16 +6,46 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 
-from .models import UserProfile, EmergencyAlert, OtpRecord, EmergencyContact, TripLog
+from .models import UserProfile, EmergencyAlert, OtpRecord, EmergencyContact, TripLog, GuardianLink, ChatMessage
 from .serializers import (
     UserProfileSerializer,
     EmergencyAlertSerializer,
     OtpRecordSerializer,
     EmergencyContactSerializer,
-    TripLogSerializer
+    TripLogSerializer,
+    GuardianLinkSerializer,
+    ChatMessageSerializer
 )
 from .supabase_client import sync_user_to_supabase, sync_alert_to_supabase, sync_otp_to_supabase
 from .resend_mailer import send_otp_email, send_sos_alert_email
+
+
+def find_user_by_identifier(identifier, user_id=None):
+    """
+    Robust lookup for user by ID, email, exact phone, or phone with/without '+' and spaces.
+    """
+    if user_id:
+        u = UserProfile.objects.filter(id=user_id).first()
+        if u: return u
+
+    if not identifier:
+        return None
+
+    raw = str(identifier).strip()
+    plus_ver = raw if raw.startswith('+') else f"+{raw.lstrip()}"
+    space_fix = raw.replace(' ', '+')
+    digits_only = ''.join(c for c in raw if c.isdigit())
+    last10 = digits_only[-10:] if len(digits_only) >= 10 else digits_only
+
+    return UserProfile.objects.filter(
+        Q(email__iexact=raw) |
+        Q(phone=raw) |
+        Q(phone=plus_ver) |
+        Q(phone=space_fix) |
+        (Q(phone__endswith=last10) if last10 else Q(pk__isnull=True))
+    ).first()
+
+
 
 class SendOtpView(APIView):
     def post(self, request):
@@ -487,3 +517,265 @@ class PingView(APIView):
             'state': 'online',
             'keep_alive': True
         }, status=status.HTTP_200_OK)
+
+
+class GuardianLinkView(APIView):
+    """
+    Manage linking and unlinking of Guardians with Protected Users (Wards).
+    """
+    def get(self, request):
+        phone = request.query_params.get('phone', '').strip()
+        user_id = request.query_params.get('user_id')
+        role = request.query_params.get('role', '').strip()
+
+        user = find_user_by_identifier(phone, user_id)
+
+        if not user:
+            # Return all links if superadmin/general query
+            links = GuardianLink.objects.all().order_by('-created_at')
+            serializer = GuardianLinkSerializer(links, many=True)
+            return Response({'status': 'success', 'links': serializer.data}, status=status.HTTP_200_OK)
+
+        # If user is a guardian, return their wards
+        if user.role == 'guardian' or role == 'guardian':
+            links = GuardianLink.objects.filter(guardian=user).order_by('-created_at')
+        else:
+            links = GuardianLink.objects.filter(user=user).order_by('-created_at')
+
+        serializer = GuardianLinkSerializer(links, many=True)
+        return Response({
+            'status': 'success',
+            'user': {'id': user.id, 'name': user.name, 'role': user.role, 'phone': user.phone},
+            'links': serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        user_phone = request.data.get('user_phone', '').strip()
+        user_id = request.data.get('user_id')
+        guardian_phone = request.data.get('guardian_phone', '').strip()
+        guardian_name = request.data.get('guardian_name', '').strip()
+        relationship = request.data.get('relationship', 'Family').strip()
+
+        if not guardian_phone:
+            return Response({'status': 'error', 'message': 'Guardian phone or email is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Resolve Protected User
+        user = find_user_by_identifier(user_phone, user_id)
+
+        if not user:
+            return Response({'status': 'error', 'message': 'Protected User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Resolve or Auto-Provision Guardian
+        guardian = find_user_by_identifier(guardian_phone)
+        if not guardian:
+            guardian = UserProfile.objects.create(
+                name=guardian_name or f"Guardian {guardian_phone[-4:]}",
+                phone=guardian_phone,
+                email=guardian_phone if '@' in guardian_phone else f"{guardian_phone}@guardianai.app",
+                role='guardian',
+                is_verified=True,
+                is_active=True
+            )
+            sync_user_to_supabase(guardian)
+        else:
+            if guardian.role == 'user':
+                guardian.role = 'guardian'
+                guardian.save()
+                sync_user_to_supabase(guardian)
+
+        if user.id == guardian.id:
+            return Response({'status': 'error', 'message': 'Cannot link yourself as your own guardian'}, status=status.HTTP_400_BAD_REQUEST)
+
+        link, created = GuardianLink.objects.get_or_create(
+            user=user,
+            guardian=guardian,
+            defaults={'relationship': relationship, 'status': 'active'}
+        )
+
+        if not created:
+            link.relationship = relationship
+            link.status = 'active'
+            link.save()
+
+        serializer = GuardianLinkSerializer(link)
+        return Response({
+            'status': 'success',
+            'message': f'Guardian {guardian.name} linked successfully to {user.name}!',
+            'link': serializer.data
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    def delete(self, request):
+        link_id = request.data.get('link_id') or request.query_params.get('link_id')
+        user_phone = request.data.get('user_phone') or request.query_params.get('user_phone')
+        guardian_phone = request.data.get('guardian_phone') or request.query_params.get('guardian_phone')
+
+        if link_id:
+            link = GuardianLink.objects.filter(id=link_id).first()
+        elif user_phone and guardian_phone:
+            u = find_user_by_identifier(user_phone)
+            g = find_user_by_identifier(guardian_phone)
+            link = GuardianLink.objects.filter(user=u, guardian=g).first() if u and g else None
+        else:
+            return Response({'status': 'error', 'message': 'Link ID or User and Guardian phone required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not link:
+            return Response({'status': 'error', 'message': 'Guardian link not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        link.delete()
+        return Response({'status': 'success', 'message': 'Guardian link removed successfully'}, status=status.HTTP_200_OK)
+
+
+class GuardianTrackedWardsView(APIView):
+    """
+    Returns real-time telemetry, battery %, live GPS coordinates, and alert status
+    for all protected users (wards) assigned to a given guardian.
+    """
+    def get(self, request):
+        guardian_phone = request.query_params.get('guardian_phone', '').strip()
+        guardian_id = request.query_params.get('guardian_id')
+
+        guardian = find_user_by_identifier(guardian_phone, guardian_id)
+
+        if not guardian:
+            return Response({'status': 'error', 'message': 'Guardian not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        links = GuardianLink.objects.filter(guardian=guardian, status='active').select_related('user')
+
+        tracked_wards = []
+        for link in links:
+            ward = link.user
+            active_alert = EmergencyAlert.objects.filter(user=ward, status='active').order_by('-timestamp').first()
+
+            battery = ward.battery_level
+            battery_status = 'Good'
+            if battery <= 15:
+                battery_status = 'Critical Low (15%)'
+            elif battery <= 30:
+                battery_status = 'Low Battery'
+
+            tracked_wards.append({
+                'link_id': link.id,
+                'ward_id': ward.id,
+                'name': ward.name,
+                'phone': ward.phone,
+                'email': ward.email,
+                'relationship': link.relationship,
+                'battery_level': battery,
+                'battery_status': battery_status,
+                'latitude': ward.last_latitude,
+                'longitude': ward.last_longitude,
+                'address': ward.last_address,
+                'has_active_sos': active_alert is not None,
+                'sos_details': EmergencyAlertSerializer(active_alert).data if active_alert else None,
+                'last_updated': ward.updated_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'is_online': True
+            })
+
+        return Response({
+            'status': 'success',
+            'guardian': {
+                'id': guardian.id,
+                'name': guardian.name,
+                'phone': guardian.phone,
+                'battery_level': guardian.battery_level
+            },
+            'tracked_wards_count': len(tracked_wards),
+            'wards': tracked_wards
+        }, status=status.HTTP_200_OK)
+
+
+class ChatMessagesView(APIView):
+    """
+    Small Direct Safety Chat API between User and Guardian.
+    """
+    def get(self, request):
+        user1_phone = request.query_params.get('user1', '').strip()
+        user2_phone = request.query_params.get('user2', '').strip()
+        user1_id = request.query_params.get('user1_id')
+        user2_id = request.query_params.get('user2_id')
+
+        u1 = find_user_by_identifier(user1_phone, user1_id)
+        u2 = find_user_by_identifier(user2_phone, user2_id)
+
+        if not u1 or not u2:
+            # Fallback: if only 1 user provided, get recent messages for that user
+            single_user = u1 or u2
+            if not single_user and (user1_phone or user1_id):
+                single_user = find_user_by_identifier(user1_phone, user1_id)
+
+            if single_user:
+                messages = ChatMessage.objects.filter(Q(sender=single_user) | Q(receiver=single_user)).order_by('-timestamp')[:50]
+                serializer = ChatMessageSerializer(reversed(list(messages)), many=True)
+                return Response({'status': 'success', 'messages': serializer.data}, status=status.HTTP_200_OK)
+
+            return Response({'status': 'error', 'message': 'Users not found for chat history'}, status=status.HTTP_404_NOT_FOUND)
+
+        messages = ChatMessage.objects.filter(
+            (Q(sender=u1) & Q(receiver=u2)) | (Q(sender=u2) & Q(receiver=u1))
+        ).order_by('timestamp')
+
+        # Mark received messages as read
+        ChatMessage.objects.filter(sender=u2, receiver=u1, is_read=False).update(is_read=True)
+
+        serializer = ChatMessageSerializer(messages, many=True)
+        return Response({
+            'status': 'success',
+            'chat_partner': {
+                'id': u2.id,
+                'name': u2.name,
+                'phone': u2.phone,
+                'role': u2.role,
+                'battery_level': u2.battery_level,
+                'last_address': u2.last_address
+            },
+            'messages': serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        sender_phone = request.data.get('sender_phone', '').strip()
+        sender_id = request.data.get('sender_id')
+        receiver_phone = request.data.get('receiver_phone', '').strip()
+        receiver_id = request.data.get('receiver_id')
+        msg_text = request.data.get('message', '').strip()
+        is_sos = bool(request.data.get('is_sos', False))
+        latitude = request.data.get('latitude')
+        longitude = request.data.get('longitude')
+        battery_level = request.data.get('battery_level')
+
+        if not msg_text:
+            return Response({'status': 'error', 'message': 'Message text is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Resolve sender & receiver
+        sender = find_user_by_identifier(sender_phone, sender_id)
+        receiver = find_user_by_identifier(receiver_phone, receiver_id)
+
+        if not sender or not receiver:
+            return Response({'status': 'error', 'message': 'Sender or receiver user not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+        # Optional update sender telemetry
+        if battery_level is not None:
+            sender.battery_level = int(battery_level)
+            sender.save()
+        if latitude is not None and longitude is not None:
+            sender.last_latitude = float(latitude)
+            sender.last_longitude = float(longitude)
+            sender.save()
+
+        chat_msg = ChatMessage.objects.create(
+            sender=sender,
+            receiver=receiver,
+            message=msg_text,
+            is_sos=is_sos,
+            latitude=float(latitude) if latitude is not None else sender.last_latitude,
+            longitude=float(longitude) if longitude is not None else sender.last_longitude,
+            battery_level=int(battery_level) if battery_level is not None else sender.battery_level
+        )
+
+        serializer = ChatMessageSerializer(chat_msg)
+        return Response({
+            'status': 'success',
+            'message': 'Message sent successfully',
+            'chat_message': serializer.data
+        }, status=status.HTTP_201_CREATED)
+

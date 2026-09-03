@@ -12,7 +12,10 @@ from .views import (
     EmergencyContactsView,
     HelplinesView,
     DashboardStatsApiView,
-    PingView
+    PingView,
+    GuardianLinkView,
+    GuardianTrackedWardsView,
+    ChatMessagesView
 )
 
 urlpatterns = [
@@ -37,6 +40,16 @@ urlpatterns = [
     path('contacts/', EmergencyContactsView.as_view(), name='api-contacts'),
     path('helplines/', HelplinesView.as_view(), name='api-helplines'),
 
+    # Guardian Role & Live Tracking
+    path('guardians/link/', GuardianLinkView.as_view(), name='api-guardians-link'),
+    path('guardians/my-guardians/', GuardianLinkView.as_view(), name='api-my-guardians'),
+    path('guardians/tracked-wards/', GuardianTrackedWardsView.as_view(), name='api-tracked-wards'),
+
+    # Real-Time Safety Chat
+    path('chat/messages/', ChatMessagesView.as_view(), name='api-chat-messages'),
+    path('chat/send/', ChatMessagesView.as_view(), name='api-chat-send'),
+
     # Dashboard Telemetry
     path('dashboard/stats/', DashboardStatsApiView.as_view(), name='api-dashboard-stats'),
 ]
+

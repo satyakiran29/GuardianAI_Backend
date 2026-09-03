@@ -1,0 +1,447 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}GuardianAI — Guardian Hub &amp; Live Tracking{% endblock %}
+
+{% block content %}
+<!-- Top Header & Role / Guardian Switcher -->
+<div class="top-header">
+  <div class="header-title">
+    <h2>🛡️ Guardian Hub &amp; Live Tracking Radar</h2>
+    <p>Track your protected wards in real time, monitor battery health &amp; GPS coordinates, and direct emergency safety chat.</p>
+  </div>
+
+  <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+    {% if logged_in_user.role == 'superadmin' and all_guardians %}
+      <form method="GET" style="display: flex; align-items: center; gap: 8px;">
+        <label style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Switch Guardian:</label>
+        <select name="guardian_id" onchange="this.form.submit()" class="form-control" style="padding: 6px 12px; font-size: 0.85rem; width: auto; background: #1e293b; color: #fff; border: 1px solid var(--border-color); border-radius: 8px;">
+          {% for g in all_guardians %}
+            <option value="{{ g.id }}" {% if active_guardian and active_guardian.id == g.id %}selected{% endif %}>
+              🛡️ {{ g.name }} ({{ g.phone }})
+            </option>
+          {% endfor %}
+        </select>
+      </form>
+    {% endif %}
+    <button class="btn btn-primary btn-sm" onclick="document.getElementById('link-ward-modal').style.display='flex'">
+      + Link Protected Ward
+    </button>
+  </div>
+</div>
+
+<!-- Guardian Profile & Metrics Summary -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-title">Active Guardian Unit</span>
+      <div class="metric-icon icon-emerald">🛡️</div>
+    </div>
+    <div class="metric-value" style="font-size: 1.4rem;">
+      {{ active_guardian.name|default:"Command Center" }}
+    </div>
+    <div class="metric-subtitle">
+      <span>📞 {{ active_guardian.phone }} • Battery: <strong style="color: #10b981;">{{ active_guardian.battery_level }}%</strong></span>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-title">Tracked Protected Users</span>
+      <div class="metric-icon icon-purple">👥</div>
+    </div>
+    <div class="metric-value">{{ tracked_count }}</div>
+    <div class="metric-subtitle">
+      <span>Actively synced with live GPS</span>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-title">Live Battery Status</span>
+      <div class="metric-icon icon-cyan">🔋</div>
+    </div>
+    <div class="metric-value" style="font-size: 1.4rem;">
+      {% with low_bat=0 %}
+        100% Monitored
+      {% endwith %}
+    </div>
+    <div class="metric-subtitle">
+      <span style="color: #60a5fa;">Real-time low-battery (<15%) alerts active</span>
+    </div>
+  </div>
+
+  <div class="metric-card">
+    <div class="metric-header">
+      <span class="metric-title">Safety Chat Channel</span>
+      <div class="metric-icon icon-yellow">💬</div>
+    </div>
+    <div class="metric-value" style="font-size: 1.4rem;">Encrypted &amp; Live</div>
+    <div class="metric-subtitle">
+      <span>Instant 2-way dispatch active</span>
+    </div>
+  </div>
+</div>
+
+<!-- Main Split: Wards Telemetry & Live Chat -->
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; margin-bottom: 24px;" class="guardian-hub-grid">
+  
+  <!-- Left: Tracked Wards Cards & Live Radar Map -->
+  <div>
+    <div class="glass-panel" style="margin-bottom: 24px;">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>👥</span> Protected Users / Wards ({{ tracked_count }})
+        </div>
+        <span class="role-badge role-guardian">● Live Telemetry Synced</span>
+      </div>
+
+      {% if tracked_wards %}
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          {% for item in tracked_wards %}
+            <div class="incident-card {% if item.active_alert %}status-active{% else %}status-dispatched{% endif %}" style="background: rgba(15, 23, 42, 0.7); border: 1px solid {% if item.is_critical_battery or item.active_alert %}#ef4444{% else %}var(--border-color){% endif %};">
+              <div class="incident-header">
+                <div>
+                  <div style="font-size: 1.1rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                    🌸 {{ item.ward.name }}
+                    <span class="role-badge role-user" style="font-size: 0.7rem;">{{ item.relationship }}</span>
+                    {% if item.active_alert %}
+                      <span class="incident-status-tag tag-active" style="animation: pulse 1.5s infinite;">🚨 SOS ACTIVE</span>
+                    {% endif %}
+                  </div>
+                  <div class="victim-meta" style="margin-top: 4px;">
+                    📞 {{ item.ward.phone }} • {{ item.ward.email }}
+                  </div>
+                </div>
+
+                <!-- Battery Badge Indicator -->
+                <div style="text-align: right;">
+                  <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px;">Battery Level</div>
+                  <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; background: {% if item.is_critical_battery %}rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171;{% elif item.is_low_battery %}rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24;{% else %}rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399;{% endif %}">
+                    <span>{% if item.is_critical_battery %}🪫 ⚠️{% else %}🔋{% endif %}</span>
+                    <span>{{ item.battery_percentage }}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Location Telemetry -->
+              <div style="margin: 12px 0; background: rgba(30, 41, 59, 0.5); padding: 10px 14px; border-radius: 10px; font-size: 0.82rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                  <span style="color: var(--text-muted);">📍 Last Known GPS Location:</span>
+                  <span style="color: #94a3b8; font-size: 0.75rem;">Updated: {{ item.ward.updated_at|date:"H:i:s" }}</span>
+                </div>
+                <div style="color: #fff; font-weight: 600;">{{ item.ward.last_address|default:"Location Pending" }}</div>
+                {% if item.ward.last_latitude and item.ward.last_longitude %}
+                  <div style="margin-top: 6px; display: flex; gap: 12px; align-items: center;">
+                    <code style="font-size: 0.75rem; color: #60a5fa;">{{ item.ward.last_latitude|floatformat:4 }}, {{ item.ward.last_longitude|floatformat:4 }}</code>
+                    <a href="https://www.google.com/maps/search/?api=1&query={{ item.ward.last_latitude }},{{ item.ward.last_longitude }}" target="_blank" style="color: #38bdf8; text-decoration: none; font-weight: 600; font-size: 0.78rem;">Open Live Navigation ↗</a>
+                  </div>
+                {% endif %}
+              </div>
+
+              <!-- Quick Actions -->
+              <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+                <button class="btn btn-primary btn-sm" onclick="selectChatPartner('{{ item.ward.id }}', '{{ item.ward.name|escapejs }}', '{{ item.battery_percentage }}')">
+                  💬 Chat with {{ item.ward.name|truncatechars:12 }}
+                </button>
+                <a href="tel:{{ item.ward.phone }}" class="btn btn-outline btn-sm" style="color: #34d399; border-color: #10b981;">
+                  📞 Call
+                </a>
+                <form method="POST" action="{% url 'dashboard-unlink-guardian' item.link_id %}" onsubmit="return confirm('Unlink guardian protection for {{ item.ward.name }}?');" style="display: inline;">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-outline btn-sm" style="color: #f87171; border-color: #ef4444; font-size: 0.72rem;">
+                    ✕ Unlink
+                  </button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+          <div style="font-size: 3rem; margin-bottom: 12px;">🛡️</div>
+          <h4 style="color: #fff; margin-bottom: 6px;">No Wards Linked Yet</h4>
+          <p style="font-size: 0.85rem; margin-bottom: 16px;">Link protected users/family members to track their battery % and live GPS location.</p>
+          <button class="btn btn-primary btn-sm" onclick="document.getElementById('link-ward-modal').style.display='flex'">
+            + Link First Ward
+          </button>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Ward Live Radar Map -->
+    <div class="glass-panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>📍</span> Wards Live Telemetric Radar
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="initLiveMap()">🔄 Recenter Radar</button>
+      </div>
+      <div id="live-map" style="height: 320px; border-radius: 12px; border: 1px solid var(--border-color);"></div>
+      <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.78rem; color: var(--text-muted);">
+        <div>🌸 Purple = Protected Ward</div>
+        <div>🛡️ Green = Guardian Unit</div>
+        <div>🔴 Red = Active Distress Alert</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Real-Time Safety Chat Interface -->
+  <div>
+    <div class="glass-panel" style="display: flex; flex-direction: column; height: 100%; min-height: 600px;">
+      <div class="panel-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 14px;">
+        <div>
+          <div style="font-weight: 700; color: #fff; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+            <span>💬</span> Safety Chat Channel: <span id="chat-partner-name" style="color: #c084fc;">Select Ward</span>
+          </div>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+            Partner Battery: <span id="chat-partner-battery" style="font-weight: 700; color: #34d399;">--</span>
+          </div>
+        </div>
+        <div class="role-badge role-guardian" style="font-size: 0.7rem;">Real-Time</div>
+      </div>
+
+      <!-- Quick Safety Preset Messages -->
+      <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px;">
+        <button class="preset-chip" onclick="insertPreset('✅ Are you safe and okay?')">"Are you safe?"</button>
+        <button class="preset-chip" onclick="insertPreset('🚗 Guardian escort on the way to your location.')">"On the way"</button>
+        <button class="preset-chip" onclick="insertPreset('🔋 Please charge your phone; battery is low!')">"Low battery reminder"</button>
+        <button class="preset-chip" onclick="insertPreset('📍 Sharing live safe route checkpoint.')">"Safe route"</button>
+      </div>
+
+      <!-- Message History Stream Container -->
+      <div id="chat-messages-container" style="flex: 1; overflow-y: auto; max-height: 480px; padding: 12px; background: rgba(10, 11, 14, 0.6); border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;">
+        <div id="chat-loading-placeholder" style="text-align: center; color: var(--text-muted); padding: 40px 10px;">
+          <div style="font-size: 2.5rem; margin-bottom: 8px;">💬</div>
+          <p>Select a ward on the left to start direct safety messaging.</p>
+        </div>
+      </div>
+
+      <!-- Message Input & Action Row -->
+      <form id="chat-send-form" onsubmit="handleSendChat(event)" style="display: flex; flex-direction: column; gap: 8px;">
+        {% csrf_token %}
+        <input type="hidden" id="chat-receiver-id" value="{% if tracked_wards %}{{ tracked_wards.0.ward.id }}{% endif %}">
+        <input type="hidden" id="chat-sender-id" value="{{ active_guardian.id }}">
+
+        <div style="display: flex; gap: 8px;">
+          <input type="text" id="chat-message-input" placeholder="Type safety message or emergency instruction..." class="form-control" style="flex: 1; background: #1e293b; color: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 10px 14px; font-size: 0.9rem;" required>
+          <button type="submit" class="btn btn-primary" style="padding: 10px 18px; border-radius: 10px; font-weight: 700;">
+            Send ✈️
+          </button>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted);">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="checkbox" id="chat-is-sos" style="accent-color: #ef4444;">
+            <span style="color: #f87171; font-weight: 600;">🚨 Flag as Urgent / SOS Check</span>
+          </label>
+          <span>Auto-refreshes every 4s</span>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Link Ward to Guardian -->
+<div id="link-ward-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 999; justify-content: center; align-items: center;">
+  <div class="glass-panel" style="width: 100%; max-width: 480px; background: #0f172a; border: 1px solid var(--border-color); border-radius: 16px; padding: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+      <h3 style="color: #fff; font-size: 1.2rem; font-weight: 700;">+ Link Protected Ward</h3>
+      <button onclick="document.getElementById('link-ward-modal').style.display='none'" style="background: none; border: none; color: var(--text-muted); font-size: 1.2rem; cursor: pointer;">✕</button>
+    </div>
+
+    <form method="POST" action="{% url 'dashboard-users' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="assign_guardian">
+      <input type="hidden" name="guardian_id" value="{{ active_guardian.id }}">
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px; font-weight: 600;">Select Protected User (Ward):</label>
+        <select name="user_id" class="form-control" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;" required>
+          <option value="">-- Choose User --</option>
+          {% for u in all_users %}
+            <option value="{{ u.id }}">{{ u.name }} ({{ u.phone }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label style="display: block; color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 6px; font-weight: 600;">Relationship / Role:</label>
+        <select name="relationship" class="form-control" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;">
+          <option value="Family">Family / Parent</option>
+          <option value="Spouse">Spouse / Partner</option>
+          <option value="Friend">Friend / Roommate</option>
+          <option value="Security Officer">SHE Team / Security Officer</option>
+          <option value="Verified Escort">Verified Escort</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button type="button" class="btn btn-outline" onclick="document.getElementById('link-ward-modal').style.display='none'">Cancel</button>
+        <button type="submit" class="btn btn-primary">Link Ward to Guardian</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+.preset-chip {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid var(--border-color);
+  color: #c084fc;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.preset-chip:hover {
+  background: #8b5cf6;
+  color: #fff;
+}
+.chat-bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+.chat-bubble-sent {
+  align-self: flex-end;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.chat-bubble-received {
+  align-self: flex-start;
+  background: #1e293b;
+  color: #f1f5f9;
+  border: 1px solid var(--border-color);
+  border-bottom-left-radius: 4px;
+}
+@media (max-width: 900px) {
+  .guardian-hub-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const MAP_MARKERS = {{ map_markers_json|safe }};
+  let currentReceiverId = '{% if tracked_wards %}{{ tracked_wards.0.ward.id }}{% endif %}';
+  let currentSenderId = '{{ active_guardian.id }}';
+
+  function insertPreset(text) {
+    document.getElementById('chat-message-input').value = text;
+    document.getElementById('chat-message-input').focus();
+  }
+
+  function selectChatPartner(wardId, wardName, battery) {
+    currentReceiverId = wardId;
+    document.getElementById('chat-receiver-id').value = wardId;
+    document.getElementById('chat-partner-name').innerText = wardName;
+    document.getElementById('chat-partner-battery').innerText = battery + '%';
+    pollMessages();
+  }
+
+  function pollMessages() {
+    if (!currentReceiverId || !currentSenderId) return;
+
+    fetch(`/chat/ajax/?u1=${currentSenderId}&u2=${currentReceiverId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          renderMessages(data.messages);
+        }
+      })
+      .catch(err => console.error('Chat poll error:', err));
+  }
+
+  function renderMessages(messages) {
+    const container = document.getElementById('chat-messages-container');
+    if (!messages || messages.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; color: var(--text-muted); padding: 40px 10px;">
+          <div style="font-size: 2rem; margin-bottom: 6px;">💬</div>
+          <p>No messages yet with this ward. Send a quick check-in below!</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = '';
+    messages.forEach(m => {
+      const isMe = String(m.sender_id) === String(currentSenderId);
+      const bubble = document.createElement('div');
+      bubble.className = `chat-bubble ${isMe ? 'chat-bubble-sent' : 'chat-bubble-received'}`;
+      
+      let sosBadge = m.is_sos ? '<span style="color:#ef4444; font-weight:700; margin-right:4px;">🚨 [URGENT]</span>' : '';
+      bubble.innerHTML = `
+        <div style="font-size: 0.7rem; opacity: 0.8; margin-bottom: 2px;">
+          ${isMe ? 'You (Guardian)' : m.sender_name}
+        </div>
+        <div>${sosBadge}${escapeHtml(m.message)}</div>
+        <div style="font-size: 0.65rem; opacity: 0.7; text-align: right; margin-top: 4px;">
+          ${m.time}
+        </div>
+      `;
+      container.appendChild(bubble);
+    });
+
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function handleSendChat(e) {
+    e.preventDefault();
+    const input = document.getElementById('chat-message-input');
+    const msg = input.value.trim();
+    const isSos = document.getElementById('chat-is-sos').checked;
+    const receiverId = document.getElementById('chat-receiver-id').value;
+    const senderId = document.getElementById('chat-sender-id').value;
+
+    if (!msg || !receiverId) {
+      alert('Please select a ward to send message.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('sender_id', senderId);
+    formData.append('receiver_id', receiverId);
+    formData.append('message', msg);
+    formData.append('is_sos', isSos);
+
+    fetch('/chat/ajax/', {
+      method: 'POST',
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        input.value = '';
+        document.getElementById('chat-is-sos').checked = false;
+        pollMessages();
+      } else {
+        alert(data.message || 'Failed to send message');
+      }
+    })
+    .catch(err => {
+      console.error('Send error:', err);
+    });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  // Initial setup
+  {% if tracked_wards %}
+    selectChatPartner('{{ tracked_wards.0.ward.id }}', '{{ tracked_wards.0.ward.name|escapejs }}', '{{ tracked_wards.0.battery_percentage }}');
+  {% endif %}
+
+  // Poll chat every 4 seconds
+  setInterval(pollMessages, 4000);
+</script>
+{% endblock %}

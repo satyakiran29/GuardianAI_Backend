@@ -171,16 +171,16 @@
 
       <div class="form-group">
         <label class="form-label">Email or Phone Number</label>
-        <input type="text" name="identifier" id="pass_identifier" required placeholder="Enter your email or phone" class="form-control">
+        <input type="text" name="identifier" id="pass_identifier" required placeholder="Enter email or phone (e.g. guardian@sheguard.app)" class="form-control">
       </div>
 
       <div class="form-group">
         <label class="form-label">Password</label>
-        <input type="password" name="password" id="pass_password" required placeholder="Enter password" class="form-control">
+        <input type="password" name="password" id="pass_password" required placeholder="Enter password (e.g. guardian123 or admin123)" class="form-control">
       </div>
 
       <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 12px; font-size: 0.95rem;">
-        🔐 Access Command Dashboard
+        🔐 Sign In to Portal
       </button>
     </form>
 
@@ -191,8 +191,17 @@
       <input type="hidden" name="next" value="{{ next }}">
 
       <div class="form-group">
+        <label class="form-label">Role Category</label>
+        <select name="role_type" class="form-control" style="background:#1e293b; color:#fff;">
+          <option value="guardian" selected>🛡️ Safety Guardian / Responder</option>
+          <option value="superadmin">👮 SuperAdmin Desk</option>
+          <option value="user">🌸 Protected Citizen</option>
+        </select>
+      </div>
+
+      <div class="form-group">
         <label class="form-label">Registered Phone Number</label>
-        <input type="tel" name="phone" id="otp_phone" required placeholder="e.g. +919876543210" class="form-control">
+        <input type="tel" name="phone" id="otp_phone" required placeholder="e.g. +919988776655" class="form-control">
       </div>
 
       <div class="form-group">
@@ -211,9 +220,33 @@
         🔑 Verify &amp; Sign In
       </button>
     </form>
+
+    <!-- Quick 1-Click Role Accounts -->
+    <div class="demo-accounts">
+      <p style="font-size: 0.78rem; color: #94a3b8; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">
+        ⚡ Instant Role Access (1-Click)
+      </p>
+
+      <button type="button" class="demo-btn" onclick="fillDemo('guardian@sheguard.app', 'guardian123')">
+        <span>🛡️ <strong>Guardian Unit</strong> (Rajesh Sharma)</span>
+        <span style="font-size: 0.72rem; color: #34d399; background: rgba(16,185,129,0.15); padding: 2px 8px; border-radius: 6px;">Guardian Hub</span>
+      </button>
+
+      <button type="button" class="demo-btn" onclick="fillDemo('admin@sheguard.app', 'admin123')">
+        <span>👮 <strong>SuperAdmin Desk</strong> (Commander)</span>
+        <span style="font-size: 0.72rem; color: #c084fc; background: rgba(139,92,246,0.15); padding: 2px 8px; border-radius: 6px;">SuperAdmin</span>
+      </button>
+    </div>
   </div>
 
   <script>
+    function fillDemo(email, pass) {
+      switchTab('pass');
+      document.getElementById('pass_identifier').value = email;
+      document.getElementById('pass_password').value = pass;
+      document.getElementById('form-pass').submit();
+    }
+
     function switchTab(mode) {
       if (mode === 'pass') {
         document.getElementById('form-pass').style.display = 'block';
