@@ -4,6 +4,7 @@ from .views import (
     VerifyOtpView,
     RegisterView,
     UpdateProfileView,
+    DeleteAccountView,
     LoginView,
     SosTriggerView,
     SosResolveView,
@@ -16,7 +17,8 @@ from .views import (
     GuardianLinkView,
     GuardianTrackedWardsView,
     ChatMessagesView,
-    LocationHistoryView
+    LocationHistoryView,
+    ForensicDebriefView
 )
 
 urlpatterns = [
@@ -29,6 +31,7 @@ urlpatterns = [
     path('auth/verify-otp/', VerifyOtpView.as_view(), name='api-verify-otp'),
     path('auth/register/', RegisterView.as_view(), name='api-register'),
     path('auth/profile/update/', UpdateProfileView.as_view(), name='api-profile-update'),
+    path('auth/delete-account/', DeleteAccountView.as_view(), name='api-delete-account'),
     path('auth/login/', LoginView.as_view(), name='api-login'),
 
     # SOS & Emergency Telemetry
@@ -36,6 +39,7 @@ urlpatterns = [
     path('sos/resolve/', SosResolveView.as_view(), name='api-sos-resolve'),
     path('location/ping/', LocationPingView.as_view(), name='api-location-ping'),
     path('location/history/', LocationHistoryView.as_view(), name='api-location-history'),
+    path('location/debrief/', ForensicDebriefView.as_view(), name='api-location-debrief'),
 
     # Users & Contacts
     path('users/', UserListView.as_view(), name='api-users'),

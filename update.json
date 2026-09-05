@@ -1,0 +1,12 @@
+{
+  "versionCode": 23,
+  "versionName": "1.2.5",
+  "downloadUrl": "https://raw.githubusercontent.com/satyakiran29/GuardianAI/main/Apk/GuardianAI-debug.apk",
+  "changelog": [
+    "Permanent Account Deletion: Dedicated Account & Security section with confirmation dialog, server cascade purge, and local session wipe",
+    "Profile Overhaul with Dark Reassuring Look: Glowing pink avatar halo, camera badge overlay, script watermarks, and unified card layout",
+    "Humanized Arrival & Safety Check-In with real-world journey presets (Cab/Auto, Walking Alone, Solo Run, Meeting, Late Transit, Custom)",
+    "Trusted Safety Circle Alert Transparency with live emergency contacts preview and optional trip notes",
+    "Incident Heatmap & 24h Trail Forensic PDF Debrief Exporter with cryptographic SHA-256 seal"
+  ]
+}

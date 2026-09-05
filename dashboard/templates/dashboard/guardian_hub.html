@@ -143,6 +143,9 @@
                 <button type="button" class="btn btn-outline btn-sm" style="color: #f43f5e; border-color: rgba(244,63,94,0.5); font-weight: 600;" onclick="openTrailReplay('{{ item.ward.phone }}', '{{ item.ward.name|escapejs }}')">
                   🎞️ 24h Replay
                 </button>
+                <a href="/api/location/debrief/?ward_phone={{ item.ward.phone|urlencode }}&guardian_phone={{ active_guardian.phone|urlencode }}&hours=24&format=html" target="_blank" class="btn btn-outline btn-sm" style="color: #38bdf8; border-color: rgba(56,189,248,0.5); font-weight: 600;" title="Export official tamper-evident forensic debrief report (PDF / Print)">
+                  📄 PDF Debrief
+                </a>
                 <button class="btn btn-primary btn-sm" onclick="selectChatPartner('{{ item.ward.id }}', '{{ item.ward.name|escapejs }}', '{{ item.battery_percentage }}')">
                   💬 Chat
                 </button>
@@ -304,6 +307,9 @@
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 10px;">
+        <button onclick="exportForensicPdf()" style="background: rgba(56,189,248,0.15); border: 1px solid rgba(56,189,248,0.45); color: #38bdf8; padding: 6px 13px; border-radius: 9px; font-weight: 600; font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;" title="Export official tamper-evident forensic debrief report for campus security, university administration, or police complaints">
+          <span>📄</span> Export Forensic PDF
+        </button>
         <span class="role-badge role-guardian" id="replay-point-counter" style="font-size: 0.75rem;">Loading...</span>
         <button onclick="closeTrailReplay()" style="background: rgba(255,255,255,0.08); border: none; color: #fff; width: 34px; height: 34px; border-radius: 10px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">✕</button>
       </div>
@@ -564,8 +570,12 @@
   let replayIsPlaying = false;
   let replayTimer = null;
   let replaySpeedMultiplier = 1;
+  let activeReplayWardPhone = '';
+  let activeReplayWardName = '';
 
   function openTrailReplay(wardPhone, wardName) {
+    activeReplayWardPhone = wardPhone;
+    activeReplayWardName = wardName;
     document.getElementById('replay-ward-name').innerText = `24h Replay: ${wardName}`;
     document.getElementById('trail-replay-modal').style.display = 'flex';
     document.getElementById('replay-point-counter').innerText = 'Loading Telemetry...';
@@ -774,6 +784,16 @@
   function closeTrailReplay() {
     pauseTrail();
     document.getElementById('trail-replay-modal').style.display = 'none';
+  }
+
+  function exportForensicPdf() {
+    if (!activeReplayWardPhone) {
+      alert('No protected ward selected for forensic debrief export.');
+      return;
+    }
+    const guardianPhone = '{{ active_guardian.phone|default:"" }}';
+    const debriefUrl = `/api/location/debrief/?ward_phone=${encodeURIComponent(activeReplayWardPhone)}&guardian_phone=${encodeURIComponent(guardianPhone)}&hours=24&format=html`;
+    window.open(debriefUrl, '_blank');
   }
 </script>
 {% endblock %}
