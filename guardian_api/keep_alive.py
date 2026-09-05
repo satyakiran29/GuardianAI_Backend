@@ -25,7 +25,7 @@ def _ping_loop():
                 os.getenv('RENDER_EXTERNAL_URL') or 
                 os.getenv('BACKEND_URL') or 
                 os.getenv('SELF_PING_URL') or 
-                'https://guardianai-backend-pwn5.onrender.com'
+                'https://guardianai-backend-lkpp.onrender.com'
             ).rstrip('/')
             
             ping_endpoint = f"{base_url}/api/ping/"
