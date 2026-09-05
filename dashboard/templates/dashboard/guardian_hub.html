@@ -140,8 +140,11 @@
 
               <!-- Quick Actions -->
               <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
+                <button type="button" class="btn btn-outline btn-sm" style="color: #f43f5e; border-color: rgba(244,63,94,0.5); font-weight: 600;" onclick="openTrailReplay('{{ item.ward.phone }}', '{{ item.ward.name|escapejs }}')">
+                  🎞️ 24h Replay
+                </button>
                 <button class="btn btn-primary btn-sm" onclick="selectChatPartner('{{ item.ward.id }}', '{{ item.ward.name|escapejs }}', '{{ item.battery_percentage }}')">
-                  💬 Chat with {{ item.ward.name|truncatechars:12 }}
+                  💬 Chat
                 </button>
                 <a href="tel:{{ item.ward.phone }}" class="btn btn-outline btn-sm" style="color: #34d399; border-color: #10b981;">
                   📞 Call
@@ -283,6 +286,92 @@
   </div>
 </div>
 
+<!-- Modal: 24h Location History & Route Playback -->
+<div id="trail-replay-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); z-index: 1000; justify-content: center; align-items: center; padding: 20px;">
+  <div class="glass-panel" style="width: 100%; max-width: 920px; background: #0b0f19; border: 1px solid rgba(244,63,94,0.3); border-radius: 20px; padding: 24px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); display: flex; flex-direction: column; gap: 16px; max-height: 92vh; overflow: hidden;">
+    
+    <!-- Modal Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="background: rgba(244,63,94,0.15); width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+          🎞️
+        </div>
+        <div>
+          <h3 id="replay-ward-name" style="color: #fff; font-size: 1.25rem; font-weight: 700; margin: 0;">24h Location History Replay</h3>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+            Telemetry timeline &amp; breadcrumb trajectory review
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="role-badge role-guardian" id="replay-point-counter" style="font-size: 0.75rem;">Loading...</span>
+        <button onclick="closeTrailReplay()" style="background: rgba(255,255,255,0.08); border: none; color: #fff; width: 34px; height: 34px; border-radius: 10px; cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">✕</button>
+      </div>
+    </div>
+
+    <!-- Replay Map Display -->
+    <div style="position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--border-color); background: #07090e;">
+      <div id="replay-map" style="height: 380px; width: 100%;"></div>
+      
+      <!-- Incident Beacon Banner (Conditional Overlay) -->
+      <div id="replay-incident-alert" style="display: none; position: absolute; top: 12px; left: 12px; right: 12px; background: rgba(239,68,68,0.92); backdrop-filter: blur(4px); color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; z-index: 500; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 15px rgba(239,68,68,0.5);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 1.2rem;">🚨</span>
+          <span id="replay-incident-text">EMERGENCY SOS TRIGGERED AT THIS CHECKPOINT</span>
+        </div>
+        <span style="background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 6px; font-size: 0.72rem;">Incident Beacon</span>
+      </div>
+    </div>
+
+    <!-- Telemetry Readout Strip -->
+    <div style="display: grid; grid-template-columns: 1.2fr 1fr 2fr; gap: 14px; background: rgba(15,23,42,0.8); border: 1px solid var(--border-color); border-radius: 12px; padding: 12px 18px; align-items: center;">
+      <div>
+        <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Timestamp</div>
+        <div id="replay-timestamp" style="font-weight: 700; color: #fff; font-size: 0.95rem; margin-top: 2px;">--:-- --</div>
+      </div>
+      <div>
+        <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Battery Health</div>
+        <div id="replay-battery" style="font-weight: 700; color: #34d399; font-size: 0.95rem; margin-top: 2px;">--%</div>
+      </div>
+      <div>
+        <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Recorded Location</div>
+        <div id="replay-address" style="font-weight: 600; color: #e2e8f0; font-size: 0.85rem; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">--</div>
+      </div>
+    </div>
+
+    <!-- Scrubber Slider & Playback Controls -->
+    <div style="display: flex; flex-direction: column; gap: 10px; background: rgba(15,23,42,0.5); padding: 14px 18px; border-radius: 14px; border: 1px solid var(--border-color);">
+      <!-- Scrubber Seek Bar -->
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span id="replay-time-start" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; width: 60px;">24h ago</span>
+        <input type="range" id="replay-slider" min="0" max="0" value="0" oninput="onSliderScrub(this.value)" style="flex: 1; accent-color: #f43f5e; cursor: pointer; height: 6px; border-radius: 3px;">
+        <span id="replay-time-end" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; width: 60px; text-align: right;">Now</span>
+      </div>
+
+      <!-- Button Controls -->
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="btn-step-prev" onclick="stepReplay(-1)" class="btn btn-outline btn-sm" style="padding: 6px 12px; font-size: 0.85rem;">⏮</button>
+          <button id="btn-play-pause" onclick="togglePlayPause()" class="btn btn-primary btn-sm" style="padding: 6px 18px; font-weight: 700; background: #f43f5e; border-color: #f43f5e; display: flex; align-items: center; gap: 6px;">
+            <span id="play-icon">▶</span> <span id="play-text">Play Replay</span>
+          </button>
+          <button id="btn-step-next" onclick="stepReplay(1)" class="btn btn-outline btn-sm" style="padding: 6px 12px; font-size: 0.85rem;">⏭</button>
+          <button onclick="resetReplay()" class="btn btn-outline btn-sm" style="padding: 6px 12px; font-size: 0.8rem; color: var(--text-muted);">↺ Restart</button>
+        </div>
+
+        <!-- Playback Speed Chips -->
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 4px; font-weight: 600;">Speed:</span>
+          <button class="speed-chip active" id="speed-1x" onclick="setReplaySpeed(1, 'speed-1x')">1x</button>
+          <button class="speed-chip" id="speed-2x" onclick="setReplaySpeed(2, 'speed-2x')">2x</button>
+          <button class="speed-chip" id="speed-5x" onclick="setReplaySpeed(5, 'speed-5x')">5x</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <style>
 .preset-chip {
   background: rgba(30, 41, 59, 0.8);
@@ -321,7 +410,27 @@
   border: 1px solid var(--border-color);
   border-bottom-left-radius: 4px;
 }
-@media (max-width: 900px) {
+.speed-chip {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid var(--border-color);
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.speed-chip:hover {
+  background: rgba(244,63,94,0.2);
+  color: #fff;
+}
+.speed-chip.active {
+  background: #f43f5e;
+  border-color: #f43f5e;
+  color: #fff;
+}
+@media (max-width: 992px) {
   .guardian-hub-grid {
     grid-template-columns: 1fr !important;
   }
@@ -443,5 +552,228 @@
 
   // Poll chat every 4 seconds
   setInterval(pollMessages, 4000);
+
+  // --- 24h Trail Replay Playback Engine ---
+  let replayMap = null;
+  let replayTrailData = [];
+  let replayPolyline = null;
+  let replayBreadcrumbs = [];
+  let replayWardMarker = null;
+  let replayIncidentMarkers = [];
+  let replayCurrentIdx = 0;
+  let replayIsPlaying = false;
+  let replayTimer = null;
+  let replaySpeedMultiplier = 1;
+
+  function openTrailReplay(wardPhone, wardName) {
+    document.getElementById('replay-ward-name').innerText = `24h Replay: ${wardName}`;
+    document.getElementById('trail-replay-modal').style.display = 'flex';
+    document.getElementById('replay-point-counter').innerText = 'Loading Telemetry...';
+
+    const guardianPhone = '{{ active_guardian.phone|default:"" }}';
+    const url = `/api/location/history/?ward_phone=${encodeURIComponent(wardPhone)}&guardian_phone=${encodeURIComponent(guardianPhone)}&hours=24`;
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success' && data.trail && data.trail.length > 0) {
+          replayTrailData = data.trail;
+          initReplayMap(replayTrailData);
+        } else {
+          alert(data.message || 'No location points found for this ward.');
+          closeTrailReplay();
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load trail replay:', err);
+        alert('Could not load trail data. Ensure guardian access is authorized.');
+        closeTrailReplay();
+      });
+  }
+
+  function initReplayMap(trail) {
+    if (!replayMap) {
+      replayMap = L.map('replay-map', {
+        zoomControl: true,
+        attributionControl: false
+      });
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19
+      }).addTo(replayMap);
+    }
+
+    // Clear previous layers
+    if (replayPolyline) replayMap.removeLayer(replayPolyline);
+    replayBreadcrumbs.forEach(m => replayMap.removeLayer(m));
+    replayBreadcrumbs = [];
+    replayIncidentMarkers.forEach(m => replayMap.removeLayer(m));
+    replayIncidentMarkers = [];
+    if (replayWardMarker) replayMap.removeLayer(replayWardMarker);
+
+    const latlngs = trail.map(pt => [pt.latitude, pt.longitude]);
+
+    // Draw connecting path
+    replayPolyline = L.polyline(latlngs, {
+      color: '#f43f5e',
+      weight: 4,
+      opacity: 0.85,
+      dashArray: '8, 6'
+    }).addTo(replayMap);
+
+    // Add breadcrumb dots
+    trail.forEach((pt, idx) => {
+      const isIncident = pt.is_incident;
+      if (isIncident) {
+        const alertBeacon = L.circleMarker([pt.latitude, pt.longitude], {
+          radius: 11,
+          color: '#ef4444',
+          weight: 3,
+          fillColor: '#dc2626',
+          fillOpacity: 0.9
+        }).addTo(replayMap);
+        alertBeacon.bindPopup(`<strong style="color:#ef4444;">🚨 SOS Incident Beacon</strong><br/>${pt.formatted_time} - ${pt.address}`);
+        replayIncidentMarkers.push(alertBeacon);
+      } else {
+        const dot = L.circleMarker([pt.latitude, pt.longitude], {
+          radius: 5,
+          color: '#f43f5e',
+          weight: 1,
+          fillColor: '#fb7185',
+          fillOpacity: 0.7
+        }).addTo(replayMap);
+        dot.bindPopup(`<strong>Checkpoint #${idx+1}</strong><br/>${pt.formatted_time}<br/>${pt.address}`);
+        replayBreadcrumbs.push(dot);
+      }
+    });
+
+    // Create current position marker
+    const firstPt = trail[0];
+    const wardIcon = L.divIcon({
+      className: 'ward-pulse-marker',
+      html: '<div style="background:#f43f5e; width:18px; height:18px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 14px #f43f5e;"></div>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+    replayWardMarker = L.marker([firstPt.latitude, firstPt.longitude], { icon: wardIcon }).addTo(replayMap);
+
+    // Zoom to fit bounds
+    replayMap.fitBounds(replayPolyline.getBounds(), { padding: [40, 40] });
+    setTimeout(() => replayMap.invalidateSize(), 200);
+
+    // Configure slider
+    const slider = document.getElementById('replay-slider');
+    slider.min = 0;
+    slider.max = trail.length - 1;
+    slider.value = 0;
+    replayCurrentIdx = 0;
+
+    document.getElementById('replay-time-start').innerText = trail[0].formatted_time;
+    document.getElementById('replay-time-end').innerText = trail[trail.length - 1].formatted_time;
+
+    updateReplayPointDisplay(0);
+  }
+
+  function updateReplayPointDisplay(idx) {
+    if (!replayTrailData || !replayTrailData[idx]) return;
+    const pt = replayTrailData[idx];
+
+    document.getElementById('replay-timestamp').innerText = `${pt.formatted_date || ''} • ${pt.formatted_time}`;
+    document.getElementById('replay-battery').innerText = `${pt.battery_level || '--'}%`;
+    document.getElementById('replay-address').innerText = pt.address || 'Recorded Coordinates';
+    document.getElementById('replay-point-counter').innerText = `Point ${idx + 1} of ${replayTrailData.length}`;
+    document.getElementById('replay-slider').value = idx;
+
+    // Update incident beacon
+    const alertBox = document.getElementById('replay-incident-alert');
+    if (pt.is_incident) {
+      alertBox.style.display = 'flex';
+      const trigger = pt.incident_details ? pt.incident_details.trigger_source : 'Manual Button';
+      document.getElementById('replay-incident-text').innerText = `🚨 EMERGENCY SOS TRIGGERED HERE (${trigger.toUpperCase()})`;
+    } else {
+      alertBox.style.display = 'none';
+    }
+
+    // Move marker
+    if (replayWardMarker) {
+      replayWardMarker.setLatLng([pt.latitude, pt.longitude]);
+      if (replayMap && !replayMap.getBounds().contains([pt.latitude, pt.longitude])) {
+        replayMap.panTo([pt.latitude, pt.longitude], { animate: true });
+      }
+    }
+  }
+
+  function onSliderScrub(val) {
+    pauseTrail();
+    replayCurrentIdx = parseInt(val, 10);
+    updateReplayPointDisplay(replayCurrentIdx);
+  }
+
+  function stepReplay(delta) {
+    pauseTrail();
+    const nextIdx = replayCurrentIdx + delta;
+    if (nextIdx >= 0 && nextIdx < replayTrailData.length) {
+      replayCurrentIdx = nextIdx;
+      updateReplayPointDisplay(replayCurrentIdx);
+    }
+  }
+
+  function togglePlayPause() {
+    if (replayIsPlaying) {
+      pauseTrail();
+    } else {
+      playTrail();
+    }
+  }
+
+  function playTrail() {
+    if (!replayTrailData || replayTrailData.length === 0) return;
+    if (replayCurrentIdx >= replayTrailData.length - 1) {
+      replayCurrentIdx = 0;
+    }
+    replayIsPlaying = true;
+    document.getElementById('play-icon').innerText = '⏸';
+    document.getElementById('play-text').innerText = 'Pause';
+
+    clearInterval(replayTimer);
+    const stepDuration = Math.max(200, 1000 / replaySpeedMultiplier);
+    replayTimer = setInterval(() => {
+      replayCurrentIdx++;
+      if (replayCurrentIdx >= replayTrailData.length) {
+        pauseTrail();
+        replayCurrentIdx = replayTrailData.length - 1;
+        return;
+      }
+      updateReplayPointDisplay(replayCurrentIdx);
+    }, stepDuration);
+  }
+
+  function pauseTrail() {
+    replayIsPlaying = false;
+    clearInterval(replayTimer);
+    const playIcon = document.getElementById('play-icon');
+    const playText = document.getElementById('play-text');
+    if (playIcon) playIcon.innerText = '▶';
+    if (playText) playText.innerText = 'Play Replay';
+  }
+
+  function resetReplay() {
+    pauseTrail();
+    replayCurrentIdx = 0;
+    updateReplayPointDisplay(0);
+  }
+
+  function setReplaySpeed(multiplier, chipId) {
+    replaySpeedMultiplier = multiplier;
+    document.querySelectorAll('.speed-chip').forEach(c => c.classList.remove('active'));
+    document.getElementById(chipId).classList.add('active');
+    if (replayIsPlaying) {
+      playTrail();
+    }
+  }
+
+  function closeTrailReplay() {
+    pauseTrail();
+    document.getElementById('trail-replay-modal').style.display = 'none';
+  }
 </script>
 {% endblock %}

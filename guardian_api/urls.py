@@ -15,7 +15,8 @@ from .views import (
     PingView,
     GuardianLinkView,
     GuardianTrackedWardsView,
-    ChatMessagesView
+    ChatMessagesView,
+    LocationHistoryView
 )
 
 urlpatterns = [
@@ -34,6 +35,7 @@ urlpatterns = [
     path('sos/trigger/', SosTriggerView.as_view(), name='api-sos-trigger'),
     path('sos/resolve/', SosResolveView.as_view(), name='api-sos-resolve'),
     path('location/ping/', LocationPingView.as_view(), name='api-location-ping'),
+    path('location/history/', LocationHistoryView.as_view(), name='api-location-history'),
 
     # Users & Contacts
     path('users/', UserListView.as_view(), name='api-users'),

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import UserProfile, EmergencyAlert, OtpRecord, EmergencyContact, TripLog, GuardianLink, ChatMessage
+from .models import UserProfile, EmergencyAlert, OtpRecord, EmergencyContact, TripLog, GuardianLink, ChatMessage, LocationHistory
 
 class EmergencyContactSerializer(serializers.ModelSerializer):
     class Meta:
@@ -105,4 +105,20 @@ class TripLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = TripLog
         fields = '__all__'
+
+
+class LocationHistorySerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.name', read_only=True)
+    user_phone = serializers.CharField(source='user.phone', read_only=True)
+    formatted_time = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LocationHistory
+        fields = [
+            'id', 'user', 'user_name', 'user_phone', 'latitude', 'longitude',
+            'address', 'battery_level', 'timestamp', 'formatted_time'
+        ]
+
+    def get_formatted_time(self, obj):
+        return obj.timestamp.strftime('%I:%M %p')
 

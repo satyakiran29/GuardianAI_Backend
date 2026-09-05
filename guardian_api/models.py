@@ -137,3 +137,21 @@ class ChatMessage(models.Model):
 
     def __str__(self):
         return f"[{self.timestamp.strftime('%H:%M')}] {self.sender.name} -> {self.receiver.name}: {self.message[:30]}"
+
+
+class LocationHistory(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='location_history')
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    address = models.CharField(max_length=255, blank=True, default='')
+    battery_level = models.IntegerField(null=True, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['user', '-timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.name} @ ({self.latitude}, {self.longitude}) - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
